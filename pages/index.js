@@ -33,20 +33,23 @@ export default function Landing() {
           <button className={billingPeriod === 'yearly' ? 'btn' : 'btn ghost'} onClick={() => setBillingPeriod('yearly')}>Yearly</button>
         </div>
         <div className="opp-grid">
-          {PRICING_TIERS.map((t) => (
-            <div key={t.id} className="card">
-              <h3 style={{ margin: '0 0 4px' }}>{t.label}</h3>
-              <div className="dim">{t.maxCreators ? `Up to ${t.maxCreators} creators` : 'Unlimited creators'}</div>
-              <div style={{ fontSize: 28, fontWeight: 800, margin: '10px 0' }}>
-                {t.monthly ? `$${billingPeriod === 'yearly' ? t.yearly : t.monthly}` : 'Custom'}
-                {t.monthly && <span className="dim" style={{ fontSize: 13, fontWeight: 400 }}>/{billingPeriod === 'yearly' ? 'yr' : 'mo'}</span>}
+          {PRICING_TIERS.map((t) => {
+            const isCustom = !t.monthly;
+            return (
+              <div key={t.id} className="card" style={isCustom ? { textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' } : undefined}>
+                <h3 style={{ margin: '0 0 4px' }}>{t.label}</h3>
+                <div className="dim">{t.maxCreators ? `Up to ${t.maxCreators} creators` : 'Unlimited creators'}</div>
+                <div style={{ fontSize: isCustom ? 22 : 28, fontWeight: 800, margin: '14px 0' }}>
+                  {t.monthly ? `$${billingPeriod === 'yearly' ? t.yearly : t.monthly}` : 'Custom pricing'}
+                  {t.monthly && <span className="dim" style={{ fontSize: 13, fontWeight: 400 }}>/{billingPeriod === 'yearly' ? 'yr' : 'mo'}</span>}
+                </div>
+                <p className="dim">{t.blurb}</p>
+                <a href="/signup" className="btn ghost" style={{ display: 'block', textAlign: 'center', textDecoration: 'none', marginTop: 8 }}>
+                  {t.monthly ? 'Get started' : 'Contact us'}
+                </a>
               </div>
-              <p className="dim">{t.blurb}</p>
-              <a href="/signup" className="btn ghost" style={{ display: 'block', textAlign: 'center', textDecoration: 'none', marginTop: 8 }}>
-                {t.monthly ? 'Get started' : 'Contact us'}
-              </a>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

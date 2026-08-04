@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { ZONES, BATTLE_TYPES, zoneByCode } from '../lib/constants';
+import { ZONES, BATTLE_TYPES, LEAGUE_OPTIONS, zoneByCode } from '../lib/constants';
 import { enablePushNotifications } from '../lib/pushClient';
 
 function tzLabel(code) { return zoneByCode(code).code; }
 function tiktokUrl(handle) { return 'https://www.tiktok.com/@' + (handle || '').replace(/^@/, ''); }
 
 export default function Home() {
-  const [agency, setAgency] = useState(null); // { id, name }
+  const [agency, setAgency] = useState(null);
   const [agencyCodeInput, setAgencyCodeInput] = useState('');
   const [agencyError, setAgencyError] = useState('');
   const [creators, setCreators] = useState([]);
@@ -21,39 +21,40 @@ export default function Home() {
   async function refresh(agencyId) {
     const aid = agencyId || agency?.id;
     if (!aid) return;
-    const [cRes, bRes] = await Promise.all([
-      fetch(`/api/creators?agencyId=${aid}`),
-      fetch(`/api/battles?agencyId=${aid}`)
-    ]);
-    setCreators(await cRes.json());
-    setBattles(await bRes.json());
+    try {
+      const [cRes, bRes] = await Promise.all([fetch('/api/creators'), fetch('/api/battles')]);
+      if (cRes.ok) setCreators(await cRes.json());
+      if (bRes.ok) setBattles(await bRes.json());
+    } catch (e) { console.error('refresh failed', e); }
   }
 
   useEffect(() => {
     (async () => {
-      // Try the strongest session first (fully logged in as a creator),
-      // then fall back to "just knows the agency code" — never trust
-      // localStorage for anything security-relevant, only ask the server.
-      const sessRes = await fetch('/api/session');
-      if (sessRes.ok) {
-        const s = await sessRes.json();
-        setAgency({ id: s.agencyId, name: s.agencyName });
-        setMyId(s.creatorId);
-        await refresh(s.agencyId);
-        setLoading(false);
-        return;
-      }
-      const agencyRes = await fetch('/api/agency-session');
-      if (agencyRes.ok) {
-        const a = await agencyRes.json();
-        setAgency({ id: a.id, name: a.name });
-        await refresh(a.id);
+      try {
+        const sessRes = await fetch('/api/session');
+        if (sessRes.ok) {
+          const s = await sessRes.json();
+          setAgency({ id: s.agencyId, name: s.agencyName });
+          setMyId(s.creatorId);
+          await refresh(s.agencyId);
+          setLoading(false);
+          return;
+        }
+        const agencyRes = await fetch('/api/agency-session');
+        if (agencyRes.ok) {
+          const a = await agencyRes.json();
+          setAgency({ id: a.id, name: a.name });
+          await refresh(a.id);
+        }
+      } catch (e) {
+        console.error('session check failed', e);
       }
       setLoading(false);
     })();
   }, []);
 
-  async function joinAgency() {
+  async function joinAgency(e) {
+    if (e) e.preventDefault();
     setAgencyError('');
     const res = await fetch('/api/agencies/resolve', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agencyCode: agencyCodeInput })
@@ -102,14 +103,14 @@ export default function Home() {
     return (
       <div className="wrap">
         <h1>BATTLE ROOM</h1>
-        <div className="card" style={{ maxWidth: 380 }}>
+        <form className="card" style={{ maxWidth: 380 }} onSubmit={joinAgency}>
           <h2>Enter your agency code</h2>
           <p className="dim">Your agency manager gives you this code — it's how Battle Room keeps your roster separate from every other agency on the platform.</p>
           <input value={agencyCodeInput} onChange={(e) => setAgencyCodeInput(e.target.value.toUpperCase())} placeholder="e.g. FALCON7X2" />
           {agencyError && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{agencyError}</p>}
-          <button className="btn" style={{ marginTop: 10 }} onClick={joinAgency}>Continue</button>
+          <button className="btn" type="submit" style={{ marginTop: 10 }}>Continue</button>
           <p className="dim" style={{ marginTop: 14 }}>Running an agency? <a href="/signup" style={{ color: 'var(--cyan)' }}>Sign up here</a> to get your own code.</p>
-        </div>
+        </form>
       </div>
     );
   }
@@ -131,7 +132,8 @@ export default function Home() {
       <div className="tabs">
         <button className={step === 'profile' ? 'active' : ''} onClick={() => setStep('profile')}>1 · Profile</button>
         <button className={step === 'opponents' ? 'active' : ''} disabled={!me} onClick={() => setStep('opponents')}>2 · Find Opponent</button>
-        <button className={step === 'battles' ? 'active' : ''} disabled={!me} onClick={() => setStep('battles')}>3 · Your Battles</button>
+        <button className={step === 'board' ? 'active' : ''} disabled={!me} onClick={() => setStep('board')}>3 · Find a Battle</button>
+        <button className={step === 'battles' ? 'active' : ''} disabled={!me} onClick={() => setStep('battles')}>4 · Your Battles</button>
       </div>
 
       {step === 'profile' && (
@@ -143,11 +145,28 @@ export default function Home() {
       {step === 'opponents' && me && (
         <OpponentsStep me={me} creators={creators} onPropose={() => setStep('battles')} />
       )}
+      {step === 'board' && me && <BoardStep me={me} />}
       {step === 'battles' && me && (
-        <BattlesStep me={me} creators={creators} battles={battles} agencyId={agency.id} onChange={refresh} />
+        <BattlesStep me={me} creators={creators} battles={battles} onChange={refresh} />
       )}
     </div>
   );
+}
+
+// Moves focus to the next input/select/button in the same form when Enter
+// is pressed on a non-last field, so tapping Enter feels like "next" — the
+// last field in each form is a submit button, so Enter there just submits.
+function focusNext(e) {
+  if (e.key !== 'Enter') return;
+  if (e.target.tagName === 'TEXTAREA') return; // allow real newlines
+  e.preventDefault();
+  const form = e.target.form;
+  if (!form) return;
+  const fields = Array.from(form.elements).filter((el) => !el.disabled && el.type !== 'hidden');
+  const idx = fields.indexOf(e.target);
+  const next = fields[idx + 1];
+  if (next) next.focus();
+  else form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event('submit', { cancelable: true }));
 }
 
 function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogin, onSaved }) {
@@ -161,7 +180,8 @@ function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogi
     setForm((f) => ({ ...f, tags: f.tags.includes(key) ? f.tags.filter((t) => t !== key) : [...f.tags, key] }));
   }
 
-  async function save() {
+  async function save(e) {
+    if (e) e.preventDefault();
     const res = await fetch(`/api/creators/${me.id}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form)
     });
@@ -175,7 +195,7 @@ function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogi
 
   if (me) {
     return (
-      <div className="card">
+      <form className="card" onSubmit={save} onKeyDown={focusNext}>
         <h2>My Profile</h2>
         <div className="row">
           <div className="field" style={{ flex: 1 }}><label>Name</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
@@ -183,14 +203,19 @@ function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogi
         </div>
         <div className="row">
           <div className="field" style={{ flex: 1 }}><label>Diamonds (30d)</label><input type="number" value={form.diamonds} onChange={(e) => setForm({ ...form, diamonds: Number(e.target.value) })} /></div>
-          <div className="field" style={{ flex: 1 }}><label>League</label><input value={form.league} onChange={(e) => setForm({ ...form, league: e.target.value })} placeholder="e.g. A1, C3" /></div>
+          <div className="field" style={{ flex: 1 }}><label>League</label>
+            <select value={form.league} onChange={(e) => setForm({ ...form, league: e.target.value })}>
+              <option value="">Select…</option>
+              {LEAGUE_OPTIONS.map((l) => <option key={l} value={l}>{l}</option>)}
+            </select>
+          </div>
           <div className="field" style={{ flex: 1 }}><label>Timezone</label>
             <select value={form.tz} onChange={(e) => setForm({ ...form, tz: e.target.value })}>
               {ZONES.map((z) => <option key={z.code} value={z.code}>{z.label}</option>)}
             </select>
           </div>
         </div>
-        <div className="field"><label>Email (optional, for battle notifications)</label><input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+        <div className="field"><label>Email (optional, for battle notifications)</label><input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
         <div className="field">
           <label>Battle types you do</label>
           <div className="row">
@@ -201,31 +226,30 @@ function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogi
             ))}
           </div>
         </div>
-        <div className="field"><label>New PIN (leave blank to keep current)</label><input type="password" maxLength={6} onChange={(e) => setForm({ ...form, pin: e.target.value })} /></div>
+        <div className="field"><label>New PIN (leave blank to keep current)</label><input type="password" maxLength={20} onChange={(e) => setForm({ ...form, pin: e.target.value })} /></div>
         <div className="row" style={{ justifyContent: 'space-between', marginTop: 10 }}>
-          <button className="btn ghost" onClick={turnOnPush}>🔔 Enable push notifications</button>
-          <button className="btn" onClick={save}>Save changes</button>
+          <button className="btn ghost" type="button" onClick={turnOnPush}>🔔 Enable push notifications</button>
+          <button className="btn" type="submit">Save changes</button>
         </div>
         {pushStatus && <p className="dim" style={{ marginTop: 8 }}>{pushStatus}</p>}
-      </div>
+      </form>
     );
   }
 
-  // Not logged in
   return (
     <div className="card">
       <h2>Who are you?</h2>
-      <p className="dim">Pick your name and enter your PIN, or create a new profile below.</p>
+      <p className="dim">Pick your name and enter your PIN, or create a new profile below. Once you log in, this browser will remember you for 30 days.</p>
       {creators.map((c) => (
         <div key={c.id} style={{ marginBottom: 8 }}>
           {pinAttempt.id === c.id ? (
-            <div className="row" style={{ alignItems: 'center' }}>
+            <form className="row" style={{ alignItems: 'center' }} onSubmit={(e) => { e.preventDefault(); onLogin(c.id, pinAttempt.value); }}>
               <span>{c.name}</span>
-              <input type="password" maxLength={6} style={{ maxWidth: 100 }} value={pinAttempt.value}
+              <input type="password" style={{ maxWidth: 140 }} value={pinAttempt.value}
                 onChange={(e) => setPinAttempt({ ...pinAttempt, value: e.target.value })} placeholder="PIN" autoFocus />
-              <button className="btn" style={{ padding: '6px 12px' }} onClick={() => onLogin(c.id, pinAttempt.value)}>Unlock</button>
-              <button className="btn ghost" style={{ padding: '6px 12px' }} onClick={() => setPinAttempt({ id: null, value: '', error: '' })}>Cancel</button>
-            </div>
+              <button className="btn" type="submit" style={{ padding: '6px 12px' }}>Unlock</button>
+              <button className="btn ghost" type="button" style={{ padding: '6px 12px' }} onClick={() => setPinAttempt({ id: null, value: '', error: '' })}>Cancel</button>
+            </form>
           ) : (
             <button className="btn ghost" style={{ width: '100%', textAlign: 'left' }} onClick={() => setPinAttempt({ id: c.id, value: '', error: '' })}>{c.name} — {c.handle}</button>
           )}
@@ -235,32 +259,39 @@ function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogi
 
       <hr style={{ border: 'none', borderTop: '1px solid var(--line)', margin: '16px 0' }} />
       <h2 style={{ fontSize: 16 }}>Create a new profile</h2>
-      <div className="row">
-        <div className="field" style={{ flex: 1 }}><label>Name</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-        <div className="field" style={{ flex: 1 }}><label>TikTok Handle</label><input value={form.handle} onChange={(e) => setForm({ ...form, handle: e.target.value })} /></div>
-      </div>
-      <div className="row">
-        <div className="field" style={{ flex: 1 }}><label>Diamonds (30d)</label><input type="number" value={form.diamonds} onChange={(e) => setForm({ ...form, diamonds: Number(e.target.value) })} /></div>
-        <div className="field" style={{ flex: 1 }}><label>League</label><input value={form.league} onChange={(e) => setForm({ ...form, league: e.target.value })} placeholder="e.g. A1, C3" /></div>
-        <div className="field" style={{ flex: 1 }}><label>Timezone</label>
-          <select value={form.tz} onChange={(e) => setForm({ ...form, tz: e.target.value })}>
-            {ZONES.map((z) => <option key={z.code} value={z.code}>{z.label}</option>)}
-          </select>
-        </div>
-      </div>
-      <div className="field"><label>Email (optional)</label><input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-      <div className="field">
-        <label>Battle types you do</label>
+      <form onKeyDown={focusNext} onSubmit={(e) => { e.preventDefault(); if (!form.name || !form.pin) { alert('Name and PIN are required.'); return; } onCreate(form); }}>
         <div className="row">
-          {BATTLE_TYPES.map((t) => (
-            <label key={t.key} className="dim" style={{ display: 'flex', gap: 6, alignItems: 'center', background: 'var(--bg-raised)', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--line)' }}>
-              <input type="checkbox" checked={form.tags.includes(t.key)} onChange={() => toggleTag(t.key)} /> {t.label}
-            </label>
-          ))}
+          <div className="field" style={{ flex: 1 }}><label>Name</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+          <div className="field" style={{ flex: 1 }}><label>TikTok Handle</label><input value={form.handle} onChange={(e) => setForm({ ...form, handle: e.target.value })} /></div>
         </div>
-      </div>
-      <div className="field"><label>Set a PIN</label><input type="password" maxLength={6} value={form.pin} onChange={(e) => setForm({ ...form, pin: e.target.value })} /></div>
-      <button className="btn" onClick={() => { if (!form.name || !form.pin) { alert('Name and PIN are required.'); return; } onCreate(form); }}>Create Profile &amp; Continue</button>
+        <div className="row">
+          <div className="field" style={{ flex: 1 }}><label>Diamonds (30d)</label><input type="number" value={form.diamonds} onChange={(e) => setForm({ ...form, diamonds: Number(e.target.value) })} /></div>
+          <div className="field" style={{ flex: 1 }}><label>League</label>
+            <select value={form.league} onChange={(e) => setForm({ ...form, league: e.target.value })}>
+              <option value="">Select…</option>
+              {LEAGUE_OPTIONS.map((l) => <option key={l} value={l}>{l}</option>)}
+            </select>
+          </div>
+          <div className="field" style={{ flex: 1 }}><label>Timezone</label>
+            <select value={form.tz} onChange={(e) => setForm({ ...form, tz: e.target.value })}>
+              {ZONES.map((z) => <option key={z.code} value={z.code}>{z.label}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="field"><label>Email (optional)</label><input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+        <div className="field">
+          <label>Battle types you do</label>
+          <div className="row">
+            {BATTLE_TYPES.map((t) => (
+              <label key={t.key} className="dim" style={{ display: 'flex', gap: 6, alignItems: 'center', background: 'var(--bg-raised)', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--line)' }}>
+                <input type="checkbox" checked={form.tags.includes(t.key)} onChange={() => toggleTag(t.key)} /> {t.label}
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="field"><label>Set a PIN (6+ characters)</label><input type="password" minLength={6} value={form.pin} onChange={(e) => setForm({ ...form, pin: e.target.value })} /></div>
+        <button className="btn" type="submit">Create Profile &amp; Continue</button>
+      </form>
     </div>
   );
 }
@@ -295,7 +326,55 @@ function OpponentsStep({ me, creators, onPropose }) {
   );
 }
 
-function BattlesStep({ me, creators, battles, agencyId, onChange }) {
+function BoardStep({ me }) {
+  const [posts, setPosts] = useState([]);
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  async function load() {
+    const res = await fetch('/api/posts');
+    if (res.ok) setPosts(await res.json());
+    setLoading(false);
+  }
+  useEffect(() => { load(); }, []);
+
+  async function post(e) {
+    if (e) e.preventDefault();
+    if (!message.trim()) return;
+    const res = await fetch('/api/posts', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message })
+    });
+    if (res.ok) { setMessage(''); load(); } else { const d = await res.json(); alert(d.error || 'Could not post.'); }
+  }
+
+  async function remove(id) {
+    await fetch(`/api/posts/${id}`, { method: 'DELETE' });
+    load();
+  }
+
+  return (
+    <div>
+      <form className="card" onSubmit={post}>
+        <h2>Find a Battle</h2>
+        <p className="dim">Post what you're looking for — like an LFG board. Anyone in your agency can see it, and only you (or an admin) can delete your post.</p>
+        <div className="field"><label>Your post</label><input value={message} onChange={(e) => setMessage(e.target.value)} maxLength={280} placeholder="e.g. Looking for a chill battle tonight around 8pm ET" /></div>
+        <button className="btn" type="submit">Post</button>
+      </form>
+      {loading ? <p className="dim">Loading…</p> : posts.length === 0 ? <p className="dim">No posts yet — be the first.</p> : posts.map((p) => (
+        <div key={p.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+          <div>
+            <b>{p.creators ? p.creators.name : 'Someone'}</b>
+            <span className="dim"> · {new Date(p.created_at).toLocaleString()}</span>
+            <p style={{ margin: '6px 0 0' }}>{p.message}</p>
+          </div>
+          {p.creator_id === me.id && <button className="btn ghost" style={{ borderColor: 'var(--pink)', color: 'var(--pink)', flexShrink: 0 }} onClick={() => remove(p.id)}>Delete</button>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function BattlesStep({ me, creators, battles, onChange }) {
   const [form, setForm] = useState({ opponent: '', datetime: '', tz: me.tz, notes: '' });
   const nameOf = (id) => creators.find((c) => c.id === id)?.name || 'Unknown';
   const handleOf = (id) => creators.find((c) => c.id === id)?.handle || '';
@@ -305,17 +384,19 @@ function BattlesStep({ me, creators, battles, agencyId, onChange }) {
   const waiting = mine.filter((b) => !b.declined && !needsResponse.includes(b) && !(b.accepted_a && b.accepted_b));
   const confirmed = mine.filter((b) => !b.declined && b.accepted_a && b.accepted_b);
 
-  async function sendInvite() {
+  async function sendInvite(e) {
+    if (e) e.preventDefault();
     if (!form.opponent || !form.datetime) { alert('Pick an opponent and a time.'); return; }
     const res = await fetch('/api/battles', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ agencyId, creatorA: me.id, creatorB: form.opponent, localDateTime: form.datetime, zoneCode: form.tz, notes: form.notes, proposerId: me.id })
+      body: JSON.stringify({ creatorA: me.id, creatorB: form.opponent, localDateTime: form.datetime, zoneCode: form.tz, notes: form.notes })
     });
-    if (res.ok) { setForm({ opponent: '', datetime: '', tz: me.tz, notes: '' }); onChange(); } else { alert('Could not send invite.'); }
+    if (res.ok) { setForm({ opponent: '', datetime: '', tz: me.tz, notes: '' }); onChange(); }
+    else { const d = await res.json(); alert(d.error || 'Could not send invite.'); }
   }
 
   async function respond(id, action) {
-    await fetch(`/api/battles/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, actorId: me.id }) });
+    await fetch(`/api/battles/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }) });
     onChange();
   }
   async function remove(id) {
@@ -325,7 +406,7 @@ function BattlesStep({ me, creators, battles, agencyId, onChange }) {
 
   return (
     <div>
-      <div className="card">
+      <form className="card" onSubmit={sendInvite} onKeyDown={focusNext}>
         <h2>Invite Someone to Battle</h2>
         <div className="row">
           <div className="field" style={{ flex: 1 }}><label>Opponent</label>
@@ -342,8 +423,8 @@ function BattlesStep({ me, creators, battles, agencyId, onChange }) {
           </div>
         </div>
         <div className="field"><label>Notes</label><input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
-        <button className="btn" onClick={sendInvite}>Send Invite</button>
-      </div>
+        <button className="btn" type="submit">Send Invite</button>
+      </form>
 
       {needsResponse.length > 0 && <h3>Needs Your Response</h3>}
       {needsResponse.map((b) => (

@@ -2,6 +2,7 @@ import { supabaseAdmin } from '../../lib/supabaseAdmin';
 import { zoneByCode, zonedTimeToUtc } from '../../lib/constants';
 import { notifyCreator } from '../../lib/push';
 import { readSession, COOKIES } from '../../lib/session';
+import { getAgencyStatus, canWrite } from '../../lib/agencyStatus';
 
 export default async function handler(req, res) {
   const creatorSession = readSession(req, COOKIES.CREATOR);
@@ -36,6 +37,9 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: 'You can only propose battles you\u2019re part of.' });
     }
     if (!localDateTime) return res.status(400).json({ error: 'Missing date/time.' });
+
+    const status = await getAgencyStatus(agencyId);
+    if (!canWrite(status)) return res.status(402).json({ error: 'This agency\u2019s subscription is inactive. Contact your agency admin.' });
 
     const { data: bothCreators, error: cErr } = await supabaseAdmin
       .from('creators').select('id, agency_id').in('id', [creatorA, creatorB]);

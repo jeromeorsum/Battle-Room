@@ -6,7 +6,7 @@ import { checkLock, recordFailure, recordSuccess } from '../../lib/rateLimit';
 export default async function handler(req, res) {
   if (req.method !== 'POST') { res.setHeader('Allow', ['POST']); return res.status(405).end(); }
 
-  const { agencyCode, adminCode } = req.body;
+  const { agencyCode, adminCode, remember } = req.body;
   if (!agencyCode || !adminCode) return res.status(400).json({ error: 'Missing agency code or admin code.' });
   const normalized = agencyCode.trim().toUpperCase();
   const identifier = `admin:${normalized}`;
@@ -26,11 +26,12 @@ export default async function handler(req, res) {
   if (!ok) { await recordFailure(identifier); return res.status(401).json({ error: 'Incorrect admin code.' }); }
 
   await recordSuccess(identifier);
-  // Admin sessions expire faster than creator sessions (12h vs 30d) since
-  // they're more privileged. Also sets the agency-scope cookie so the
-  // admin panel's roster/battle reads work without a second round trip.
-  setSessionCookie(res, COOKIES.ADMIN, { agencyId: agency.id, role: 'admin' }, 60 * 60 * 12);
-  setSessionCookie(res, COOKIES.AGENCY_SCOPE, { agencyId: agency.id }, 60 * 60 * 12);
+  // Admin sessions are short-lived (12h) by default since they're more
+  // privileged than a creator session — but if the admin explicitly asks
+  // to be remembered on this device, extend it to 30 days like a creator's.
+  const duration = remember ? 60 * 60 * 24 * 30 : 60 * 60 * 12;
+  setSessionCookie(res, COOKIES.ADMIN, { agencyId: agency.id, role: 'admin' }, duration);
+  setSessionCookie(res, COOKIES.AGENCY_SCOPE, { agencyId: agency.id }, duration);
 
   const { admin_code_hash, ...safeAgency } = agency;
   return res.status(200).json(safeAgency);

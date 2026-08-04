@@ -6,7 +6,7 @@ import { tierById } from '../../lib/pricing';
 export default async function handler(req, res) {
   if (req.method !== 'POST') { res.setHeader('Allow', ['POST']); return res.status(405).end(); }
 
-  const { name, adminCode, planTier, billingPeriod } = req.body;
+  const { name, adminCode, planTier, billingPeriod, contactEmail, contactPhone } = req.body;
   if (!name || !adminCode) return res.status(400).json({ error: 'Agency name and admin code are required.' });
   if (String(adminCode).length < 8) return res.status(400).json({ error: 'Admin code must be at least 8 characters — this protects your whole roster.' });
 
@@ -27,6 +27,8 @@ export default async function handler(req, res) {
       name,
       agency_code,
       admin_code_hash,
+      contact_email: contactEmail || null,
+      contact_phone: contactPhone || null,
       plan_tier: tier.id,
       billing_period: billingPeriod === 'yearly' ? 'yearly' : 'monthly',
       status: 'trialing',

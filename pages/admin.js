@@ -3,7 +3,7 @@ import { ZONES, BATTLE_TYPES, zoneByCode } from '../lib/constants';
 
 export default function Admin() {
   const [agency, setAgency] = useState(null);
-  const [codes, setCodes] = useState({ agencyCode: '', adminCode: '' });
+  const [codes, setCodes] = useState({ agencyCode: '', adminCode: '', remember: false });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [creators, setCreators] = useState([]);
@@ -23,7 +23,8 @@ export default function Admin() {
     })();
   }, []);
 
-  async function submitLogin() {
+  async function submitLogin(e) {
+    if (e) e.preventDefault();
     setError('');
     const res = await fetch('/api/admin-login', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -32,7 +33,7 @@ export default function Admin() {
     const data = await res.json();
     if (!res.ok) { setError(data.error || 'Login failed.'); return; }
     setAgency(data);
-    setCodes({ agencyCode: '', adminCode: '' }); // never keep codes in memory/state longer than needed
+    setCodes({ agencyCode: '', adminCode: '', remember: false });
     loadRoster();
   }
 
@@ -47,7 +48,15 @@ export default function Admin() {
     setAgency(null); setCreators([]); setBattles([]);
   }
 
-  async function bookBattle() {
+  async function removeCreator(id, name) {
+    if (!confirm(`Remove ${name} from the roster? This can't be undone.`)) return;
+    const res = await fetch(`/api/creators/${id}`, { method: 'DELETE' });
+    if (res.ok) loadRoster();
+    else alert('Could not remove creator.');
+  }
+
+  async function bookBattle(e) {
+    if (e) e.preventDefault();
     if (!bookForm.a || !bookForm.b || bookForm.a === bookForm.b || !bookForm.datetime) { alert('Pick two different creators and a time.'); return; }
     const res = await fetch('/api/battles', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -62,15 +71,19 @@ export default function Admin() {
   if (!agency) {
     return (
       <div className="wrap">
-        <div className="card" style={{ maxWidth: 380, margin: '60px auto' }}>
+        <form className="card" style={{ maxWidth: 380, margin: '60px auto' }} onSubmit={submitLogin}>
           <h2>Agency Admin Login</h2>
           <p className="dim">Enter your agency code and your personal admin code.</p>
           <div className="field"><label>Agency code</label><input value={codes.agencyCode} onChange={(e) => setCodes({ ...codes, agencyCode: e.target.value.toUpperCase() })} placeholder="e.g. FALCON7X2" /></div>
           <div className="field"><label>Admin code</label><input type="password" value={codes.adminCode} onChange={(e) => setCodes({ ...codes, adminCode: e.target.value })} placeholder="Admin code" /></div>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '6px 0 12px' }}>
+            <input type="checkbox" checked={codes.remember} onChange={(e) => setCodes({ ...codes, remember: e.target.checked })} style={{ width: 'auto' }} />
+            <span className="dim">Remember me on this device for 30 days</span>
+          </label>
           {error && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{error}</p>}
-          <button className="btn" onClick={submitLogin}>Unlock</button>
+          <button className="btn" type="submit">Unlock</button>
           <p className="dim" style={{ marginTop: 14 }}>No agency yet? <a href="/signup" style={{ color: 'var(--cyan)' }}>Sign up here</a>.</p>
-        </div>
+        </form>
       </div>
     );
   }
@@ -82,6 +95,8 @@ export default function Admin() {
     return true;
   }).sort((a, b) => (b.diamonds || 0) - (a.diamonds || 0));
 
+  const inactive = agency.status === 'past_due' || agency.status === 'canceled';
+
   return (
     <div className="wrap">
       <header style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -91,6 +106,13 @@ export default function Admin() {
         </div>
         <button className="btn ghost" onClick={logout}>Log out</button>
       </header>
+
+      {inactive && (
+        <div className="card" style={{ borderColor: 'var(--pink)' }}>
+          <b style={{ color: 'var(--pink)' }}>This agency's subscription is {agency.status === 'canceled' ? 'canceled' : 'past due'}.</b>
+          <p className="dim" style={{ margin: '6px 0 0' }}>You can still view your existing roster and battles, but creating new profiles or booking new battles is paused until this is resolved. Contact the platform owner to reactivate.</p>
+        </div>
+      )}
 
       <div className="card">
         <h2>Search Roster</h2>
@@ -114,12 +136,13 @@ export default function Admin() {
                 <button className="btn ghost" onClick={() => setBookForm({ ...bookForm, a: c.id })}>Set as A</button>
                 <button className="btn ghost" onClick={() => setBookForm({ ...bookForm, b: c.id })}>Set as B</button>
               </div>
+              <button className="btn ghost" style={{ marginTop: 4, borderColor: 'var(--pink)', color: 'var(--pink)' }} onClick={() => removeCreator(c.id, c.name)}>Remove from roster</button>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="card">
+      <form className="card" onSubmit={bookBattle}>
         <h2>Book a Battle</h2>
         <div className="row">
           <div className="field" style={{ flex: 1 }}><label>Creator A</label>
@@ -139,8 +162,8 @@ export default function Admin() {
             </select>
           </div>
         </div>
-        <button className="btn" onClick={bookBattle}>Book Battle</button>
-      </div>
+        <button className="btn" type="submit">Book Battle</button>
+      </form>
 
       <div className="card">
         <h2>All Battles</h2>

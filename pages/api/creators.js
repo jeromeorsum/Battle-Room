@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { supabaseAdmin } from '../../lib/supabaseAdmin';
 import { readSession, setSessionCookie, COOKIES } from '../../lib/session';
+import { canWrite } from '../../lib/agencyStatus';
 
 // Every request here must prove it knows the agency's code (via the
 // agency-scope cookie set by /api/agencies/resolve or /api/admin-login).
@@ -33,8 +34,9 @@ export default async function handler(req, res) {
     if (String(pin).length < 6) return res.status(400).json({ error: 'PIN must be at least 6 characters.' });
 
     const { data: agency, error: agencyErr } = await supabaseAdmin
-      .from('agencies').select('id, max_creators').eq('id', agencyId).single();
+      .from('agencies').select('id, max_creators, status').eq('id', agencyId).single();
     if (agencyErr || !agency) return res.status(404).json({ error: 'Agency not found.' });
+    if (!canWrite(agency.status)) return res.status(402).json({ error: 'This agency\u2019s subscription is inactive. Contact your agency admin.' });
 
     const { count } = await supabaseAdmin.from('creators').select('id', { count: 'exact', head: true }).eq('agency_id', agencyId);
     if ((count || 0) >= agency.max_creators) {
