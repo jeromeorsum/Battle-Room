@@ -1,0 +1,27 @@
+:root {
+  --bg: #0a0a0f; --bg-raised: #131319; --bg-card: #17171f; --line: #26262f;
+  --text: #f2f2f5; --text-dim: #8d8d9a;
+  --cyan: #25f4ee; --pink: #fe2c55; --gold: #ffd447; --green: #3ee08a; --purple: #b98bff;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: -apple-system, Inter, sans-serif; }
+.wrap { max-width: 880px; margin: 0 auto; padding: 24px 16px 60px; }
+h1 { font-size: 32px; margin: 0 0 4px; }
+.card { background: var(--bg-card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin-bottom: 18px; }
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.field label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); }
+input, select { background: var(--bg-raised); border: 1px solid var(--line); border-radius: 8px; color: var(--text); padding: 9px 10px; font-size: 14px; width: 100%; }
+.btn { background: var(--gold); color: #0a0a0f; border: none; border-radius: 8px; padding: 10px 16px; font-weight: 700; cursor: pointer; }
+.btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--text-dim); }
+.row { display: flex; gap: 10px; flex-wrap: wrap; }
+.tabs { display: flex; gap: 4px; background: var(--bg-raised); border: 1px solid var(--line); border-radius: 10px; padding: 4px; margin-bottom: 20px; }
+.tabs button { flex: 1; background: none; border: none; color: var(--text-dim); padding: 10px; border-radius: 7px; cursor: pointer; font-weight: 700; }
+.tabs button.active { background: var(--bg-card); color: var(--gold); }
+.tabs button:disabled { opacity: 0.4; cursor: not-allowed; }
+.vs { display: flex; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-bottom: 12px; background: var(--bg-card); }
+.side { flex: 1; padding: 12px 14px; }
+.side.b { text-align: right; }
+.vs .mid { display: flex; align-items: center; padding: 0 12px; color: var(--gold); font-weight: 800; border-left: 1px solid var(--line); border-right: 1px solid var(--line); }
+.badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid currentColor; }
+.dim { color: var(--text-dim); font-size: 12px; }
+.opp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
