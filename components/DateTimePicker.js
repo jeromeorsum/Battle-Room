@@ -30,15 +30,15 @@ export default function DateTimePicker({ value, onChange }) {
   }
 
   return (
-    <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
-      <input type="date" value={date} onChange={(e) => update({ date: e.target.value })} style={{ flex: 2, minWidth: 130 }} />
-      <select value={hour} onChange={(e) => update({ hour: Number(e.target.value) })} style={{ flex: 1, minWidth: 60 }}>
+    <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 6, minWidth: 0 }}>
+      <input type="date" value={date} onChange={(e) => update({ date: e.target.value })} style={{ flex: '1.4 1 0', minWidth: 100 }} />
+      <select value={hour} onChange={(e) => update({ hour: Number(e.target.value) })} style={{ flex: '0.7 1 0', minWidth: 46 }}>
         {HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
       </select>
-      <select value={minute} onChange={(e) => update({ minute: Number(e.target.value) })} style={{ flex: 1, minWidth: 70 }}>
+      <select value={minute} onChange={(e) => update({ minute: Number(e.target.value) })} style={{ flex: '0.8 1 0', minWidth: 54 }}>
         {MINUTES.map((m) => <option key={m} value={m}>:{String(m).padStart(2, '0')}</option>)}
       </select>
-      <select value={ampm} onChange={(e) => update({ ampm: e.target.value })} style={{ flex: 1, minWidth: 65 }}>
+      <select value={ampm} onChange={(e) => update({ ampm: e.target.value })} style={{ flex: '0.7 1 0', minWidth: 50 }}>
         <option value="AM">AM</option>
         <option value="PM">PM</option>
       </select>

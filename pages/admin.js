@@ -4,6 +4,7 @@ import { PRICING_TIERS } from '../lib/pricing';
 import Avatar from '../components/Avatar';
 import PasswordField from '../components/PasswordField';
 import DateTimePicker from '../components/DateTimePicker';
+import DiamondInput from '../components/DiamondInput';
 
 export default function Admin() {
   const [agency, setAgency] = useState(null);
@@ -15,7 +16,7 @@ export default function Admin() {
   const [posts, setPosts] = useState([]);
   const [filters, setFilters] = useState({ min: '', max: '', type: 'all' });
   const [bookForm, setBookForm] = useState({ a: '', b: '', datetime: '', tz: 'ET', notes: '' });
-  const [addForm, setAddForm] = useState({ name: '', handle: '', diamonds: 0, league: '', tz: 'ET', pin: '' });
+  const [addForm, setAddForm] = useState({ name: '', handle: '', diamonds: 0, league: '', tz: 'ET', tags: [], pin: '' });
   const [addError, setAddError] = useState('');
   const [billingLoading, setBillingLoading] = useState(false);
   const [codeForm, setCodeForm] = useState({ current: '', next: '' });
@@ -119,7 +120,7 @@ export default function Admin() {
     });
     const data = await res.json();
     if (!res.ok) { setAddError(data.error || 'Could not add creator.'); return; }
-    setAddForm({ name: '', handle: '', diamonds: 0, league: '', tz: 'ET', pin: '' });
+    setAddForm({ name: '', handle: '', diamonds: 0, league: '', tz: 'ET', tags: [], pin: '' });
     loadRoster();
   }
 
@@ -295,7 +296,9 @@ export default function Admin() {
         <div className="row">
           <div className="field" style={{ flex: 1 }}><label>Nickname</label><input value={addForm.name} onChange={(e) => setAddForm({ ...addForm, name: e.target.value })} /></div>
           <div className="field" style={{ flex: 1 }}><label>TikTok Handle</label><input value={addForm.handle} onChange={(e) => setAddForm({ ...addForm, handle: e.target.value })} placeholder="no @ needed" /></div>
-          <div className="field" style={{ flex: 1 }}><label>Diamonds (30d)</label><input type="number" value={addForm.diamonds} onChange={(e) => setAddForm({ ...addForm, diamonds: Number(e.target.value) })} placeholder="e.g. 10000" /></div>
+          <div className="field" style={{ flex: 1 }}><label>Diamonds (30d)</label>
+            <DiamondInput value={addForm.diamonds} onChange={(v) => setAddForm({ ...addForm, diamonds: v })} />
+          </div>
         </div>
         <div className="row">
           <div className="field" style={{ flex: 1 }}><label>League</label>
@@ -313,6 +316,16 @@ export default function Admin() {
             <PasswordField value={addForm.pin} onChange={(e) => setAddForm({ ...addForm, pin: e.target.value })} minLength={6} />
           </div>
         </div>
+        <div className="field">
+          <label>Battle types (optional — they can also set this themselves later)</label>
+          <div className="row">
+            {BATTLE_TYPES.map((t) => (
+              <label key={t.key} className="chip">
+                <input type="checkbox" checked={addForm.tags.includes(t.key)} onChange={() => setAddForm((f) => ({ ...f, tags: f.tags.includes(t.key) ? f.tags.filter((x) => x !== t.key) : [...f.tags, t.key] }))} /> {t.label}
+              </label>
+            ))}
+          </div>
+        </div>
         {addError && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{addError}</p>}
         <button className="btn" type="submit">Add to Roster</button>
       </form>
@@ -320,8 +333,8 @@ export default function Admin() {
       <div className="card">
         <h2>Roster</h2>
         <div className="row" style={{ marginBottom: 14 }}>
-          <div className="field"><label>Min diamonds</label><input type="number" value={filters.min} onChange={(e) => setFilters({ ...filters, min: e.target.value })} /></div>
-          <div className="field"><label>Max diamonds</label><input type="number" value={filters.max} onChange={(e) => setFilters({ ...filters, max: e.target.value })} /></div>
+          <div className="field"><label>Min diamonds</label><DiamondInput value={filters.min === '' ? 0 : Number(filters.min)} onChange={(v) => setFilters({ ...filters, min: v })} /></div>
+          <div className="field"><label>Max diamonds</label><DiamondInput value={filters.max === '' ? 0 : Number(filters.max)} onChange={(v) => setFilters({ ...filters, max: v })} /></div>
           <div className="field"><label>Battle type</label>
             <select value={filters.type} onChange={(e) => setFilters({ ...filters, type: e.target.value })}>
               <option value="all">All types</option>
@@ -366,14 +379,14 @@ export default function Admin() {
               <option value="">Select…</option>{creators.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
-          <div className="field" style={{ flex: 2 }}><label>Date &amp; Time</label>
-            <DateTimePicker value={bookForm.datetime} onChange={(v) => setBookForm({ ...bookForm, datetime: v })} />
-          </div>
           <div className="field" style={{ flex: 1 }}><label>Timezone</label>
             <select value={bookForm.tz} onChange={(e) => setBookForm({ ...bookForm, tz: e.target.value })}>
               {ZONES.map((z) => <option key={z.code} value={z.code}>{z.label}</option>)}
             </select>
           </div>
+        </div>
+        <div className="field"><label>Date &amp; Time</label>
+          <DateTimePicker value={bookForm.datetime} onChange={(v) => setBookForm({ ...bookForm, datetime: v })} />
         </div>
         <button className="btn" type="submit">Book Battle</button>
       </form>

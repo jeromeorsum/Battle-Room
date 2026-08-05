@@ -5,6 +5,7 @@ import { downloadICS, googleCalendarUrl } from '../lib/calendarClient';
 import Avatar from '../components/Avatar';
 import PasswordField from '../components/PasswordField';
 import DateTimePicker from '../components/DateTimePicker';
+import DiamondInput from '../components/DiamondInput';
 
 function tzLabel(code) { return zoneByCode(code).code; }
 function tiktokUrl(handle) { return 'https://www.tiktok.com/@' + (handle || '').replace(/^@/, ''); }
@@ -320,8 +321,8 @@ function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogi
           </div>
         </div>
         <div className="row">
-          <div className="field" style={{ flex: 1 }}><label>Diamonds (30d)</label><input type="number" value={form.diamonds} onChange={(e) => setForm({ ...form, diamonds: Number(e.target.value) })} placeholder="e.g. 10000" />
-            <div className="dim">Just the number, e.g. 10000</div>
+          <div className="field" style={{ flex: 1 }}><label>Diamonds (30d)</label>
+            <DiamondInput value={form.diamonds} onChange={(v) => setForm({ ...form, diamonds: v })} />
           </div>
           <div className="field" style={{ flex: 1 }}><label>League</label>
             <select value={form.league} onChange={(e) => setForm({ ...form, league: e.target.value })}>
@@ -425,8 +426,8 @@ function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogi
           </div>
         </div>
         <div className="row">
-          <div className="field" style={{ flex: 1 }}><label>Diamonds (30d)</label><input type="number" value={form.diamonds} onChange={(e) => setForm({ ...form, diamonds: Number(e.target.value) })} placeholder="e.g. 10000" />
-            <div className="dim">Just the number, e.g. 10000</div>
+          <div className="field" style={{ flex: 1 }}><label>Diamonds (30d)</label>
+            <DiamondInput value={form.diamonds} onChange={(v) => setForm({ ...form, diamonds: v })} />
           </div>
           <div className="field" style={{ flex: 1 }}><label>League</label>
             <select value={form.league} onChange={(e) => setForm({ ...form, league: e.target.value })}>
@@ -608,15 +609,13 @@ function NeedsResponseCard({ b, me, nameOf, handleOf, onRespond, onRebuttal }) {
           </div>
         ) : (
           <div>
-            <div className="row">
-              <div className="field" style={{ flex: 2 }}><label>New date &amp; time</label>
-                <DateTimePicker value={datetime} onChange={setDatetime} />
-              </div>
-              <div className="field" style={{ flex: 1 }}><label>Timezone</label>
-                <select value={tz} onChange={(e) => setTz(e.target.value)}>
-                  {ZONES.map((z) => <option key={z.code} value={z.code}>{z.label}</option>)}
-                </select>
-              </div>
+            <div className="field"><label>New date &amp; time</label>
+              <DateTimePicker value={datetime} onChange={setDatetime} />
+            </div>
+            <div className="field" style={{ maxWidth: 220 }}><label>Timezone</label>
+              <select value={tz} onChange={(e) => setTz(e.target.value)}>
+                {ZONES.map((z) => <option key={z.code} value={z.code}>{z.label}</option>)}
+              </select>
             </div>
             <div className="row" style={{ marginTop: 8 }}>
               <button className="btn ghost" onClick={() => setRebutting(false)}>Cancel</button>
@@ -683,14 +682,14 @@ function BattlesStep({ me, creators, battles, onChange }) {
               {creators.filter((c) => c.id !== me.id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
-          <div className="field" style={{ flex: 2 }}><label>Date &amp; Time (your local time)</label>
-            <DateTimePicker value={form.datetime} onChange={(v) => setForm({ ...form, datetime: v })} />
-          </div>
           <div className="field" style={{ flex: 1 }}><label>Time zone for this time</label>
             <select value={form.tz} onChange={(e) => setForm({ ...form, tz: e.target.value })}>
               {ZONES.map((z) => <option key={z.code} value={z.code}>{z.label}</option>)}
             </select>
           </div>
+        </div>
+        <div className="field"><label>Date &amp; Time (your local time)</label>
+          <DateTimePicker value={form.datetime} onChange={(v) => setForm({ ...form, datetime: v })} />
         </div>
         <div className="field"><label>Notes</label><input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
         <button className="btn" type="submit">Send Invite</button>

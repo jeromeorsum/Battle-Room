@@ -8,6 +8,7 @@ export default function SuperAdmin() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [agencies, setAgencies] = useState([]);
+  const [search, setSearch] = useState('');
   const [openRoster, setOpenRoster] = useState(null); // agencyId currently expanded
   const [rosterCreators, setRosterCreators] = useState([]);
   const [rosterLoading, setRosterLoading] = useState(false);
@@ -91,6 +92,10 @@ export default function SuperAdmin() {
 
   const STATUS_LABEL = { trialing: 'Trial', active: 'Active ✅', past_due: 'Past due ⚠️', canceled: 'Cut off ⛔' };
   const STATUS_COLOR = { trialing: 'var(--gold)', active: 'var(--green)', past_due: 'var(--pink)', canceled: 'var(--text-dim)' };
+  const q = search.trim().toLowerCase();
+  const filteredAgencies = q
+    ? agencies.filter((a) => a.name.toLowerCase().includes(q) || a.agency_code.toLowerCase().includes(q))
+    : agencies;
 
   return (
     <div className="wrap">
@@ -98,8 +103,12 @@ export default function SuperAdmin() {
         <h1>Super Admin — All Agencies</h1>
         <button className="btn ghost" onClick={logout}>Log out</button>
       </header>
-      <p className="dim">{agencies.length} agencies on the platform</p>
-      {agencies.map((a) => {
+      <div className="field" style={{ maxWidth: 320 }}>
+        <label>Search agencies</label>
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or agency code…" />
+      </div>
+      <p className="dim">{filteredAgencies.length} of {agencies.length} agencies</p>
+      {filteredAgencies.map((a) => {
         const tier = tierById(a.plan_tier);
         const price = tier.monthly ? `$${a.billing_period === 'yearly' ? tier.yearly : tier.monthly}/${a.billing_period === 'yearly' ? 'yr' : 'mo'}` : 'Custom';
         return (
