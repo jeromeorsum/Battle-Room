@@ -41,11 +41,6 @@ export default function SuperAdmin() {
     else alert('Update failed.');
   }
 
-  function cutOff(id, name) {
-    if (!confirm(`Cut off ${name}? They'll be able to view existing data but can't create new profiles or book new battles until reactivated.`)) return;
-    updateAgency(id, { status: 'canceled' });
-  }
-
   if (loading) return <div className="wrap"><p className="dim">Loading…</p></div>;
 
   if (!unlocked) {
@@ -109,9 +104,9 @@ export default function SuperAdmin() {
                     <option value="past_due">Past due</option>
                     <option value="canceled">Canceled</option>
                   </select>
-                  {a.status !== 'canceled' && (
-                    <button className="btn ghost" style={{ borderColor: 'var(--pink)', color: 'var(--pink)' }} onClick={() => cutOff(a.id, a.name)}>Cut off access</button>
-                  )}
+                </div>
+                <div className="dim" style={{ fontSize: 10, maxWidth: 200, textAlign: 'right' }}>
+                  Status updates automatically from Stripe once billing is connected — this dropdown is a manual override for edge cases.
                 </div>
               </div>
             </div>

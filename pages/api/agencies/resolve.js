@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 import { setSessionCookie, COOKIES } from '../../../lib/session';
 import { checkLock, recordFailure, recordSuccess } from '../../../lib/rateLimit';
+import { isLockedOut } from '../../../lib/agencyStatus';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') { res.setHeader('Allow', ['POST']); return res.status(405).end(); }
@@ -22,6 +23,9 @@ export default async function handler(req, res) {
   if (error || !data) {
     await recordFailure(identifier);
     return res.status(404).json({ error: 'No agency found with that code.' });
+  }
+  if (isLockedOut(data.status)) {
+    return res.status(402).json({ error: 'This agency\u2019s account is inactive. Contact the platform owner.' });
   }
 
   await recordSuccess(identifier);

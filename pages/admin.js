@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ZONES, BATTLE_TYPES, LEAGUE_OPTIONS, zoneByCode } from '../lib/constants';
+import { PRICING_TIERS } from '../lib/pricing';
 
 export default function Admin() {
   const [agency, setAgency] = useState(null);
@@ -8,10 +9,34 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [creators, setCreators] = useState([]);
   const [battles, setBattles] = useState([]);
+  const [posts, setPosts] = useState([]);
   const [filters, setFilters] = useState({ min: '', max: '', type: 'all' });
   const [bookForm, setBookForm] = useState({ a: '', b: '', datetime: '', tz: 'ET', notes: '' });
   const [addForm, setAddForm] = useState({ name: '', handle: '', diamonds: 0, league: '', tz: 'ET', pin: '' });
   const [addError, setAddError] = useState('');
+  const [billingLoading, setBillingLoading] = useState(false);
+
+  async function startCheckout(planTier, billingPeriod) {
+    setBillingLoading(true);
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ planTier, billingPeriod })
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || 'Could not start checkout.'); setBillingLoading(false); return; }
+      window.location.href = data.url;
+    } catch (e) { alert('Network error.'); setBillingLoading(false); }
+  }
+
+  async function openBillingPortal() {
+    setBillingLoading(true);
+    try {
+      const res = await fetch('/api/create-portal-session', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || 'Could not open billing portal.'); setBillingLoading(false); return; }
+      window.location.href = data.url;
+    } catch (e) { alert('Network error.'); setBillingLoading(false); }
+  }
 
   useEffect(() => {
     (async () => {
@@ -21,6 +46,9 @@ export default function Admin() {
           const data = await res.json();
           setAgency(data);
           await loadRoster();
+        } else if (res.status === 402) {
+          const d = await res.json();
+          setError(d.error);
         }
       } catch (e) { console.error('admin session check failed', e); }
       setLoading(false);
@@ -45,9 +73,10 @@ export default function Admin() {
 
   async function loadRoster() {
     try {
-      const [cRes, bRes] = await Promise.all([fetch('/api/creators'), fetch('/api/battles')]);
+      const [cRes, bRes, pRes] = await Promise.all([fetch('/api/creators'), fetch('/api/battles'), fetch('/api/posts')]);
       if (cRes.ok) setCreators(await cRes.json());
       if (bRes.ok) setBattles(await bRes.json());
+      if (pRes.ok) setPosts(await pRes.json());
     } catch (e) { console.error('loadRoster failed', e); }
   }
 
@@ -61,6 +90,11 @@ export default function Admin() {
     const res = await fetch(`/api/creators/${id}`, { method: 'DELETE' });
     if (res.ok) loadRoster();
     else alert('Could not remove creator.');
+  }
+
+  async function removePost(id) {
+    await fetch(`/api/posts/${id}`, { method: 'DELETE' });
+    loadRoster();
   }
 
   async function addCreator(e) {
@@ -148,11 +182,47 @@ export default function Admin() {
         </div>
       )}
 
+      <div className="card">
+        <h2>Billing</h2>
+        <p className="dim">Status: <b>{agency.status}</b> · Plan: <b>{agency.plan_tier}</b> ({agency.billing_period})</p>
+        {agency.status === 'trialing' || agency.status === 'canceled' || agency.status === 'past_due' ? (
+          <>
+            <p className="dim">Subscribe to keep full access after your trial ends:</p>
+            <div className="row">
+              {PRICING_TIERS.filter((t) => t.monthly).map((t) => (
+                <div key={t.id} className="card" style={{ flex: 1, minWidth: 160 }}>
+                  <b>{t.label}</b>
+                  <div className="dim">${t.monthly}/mo or ${t.yearly}/yr</div>
+                  <div className="row" style={{ marginTop: 6 }}>
+                    <button className="btn ghost" disabled={billingLoading} onClick={() => startCheckout(t.id, 'monthly')}>Monthly</button>
+                    <button className="btn ghost" disabled={billingLoading} onClick={() => startCheckout(t.id, 'yearly')}>Yearly</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <button className="btn ghost" disabled={billingLoading} onClick={openBillingPortal}>Manage Subscription</button>
+        )}
+      </div>
+
+      {posts.some((p) => p.reported) && (
+        <div className="card" style={{ borderColor: 'var(--pink)' }}>
+          <h2 style={{ color: 'var(--pink)' }}>Reported Posts</h2>
+          {posts.filter((p) => p.reported).map((p) => (
+            <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-raised)', border: '1px solid var(--line)', borderRadius: 8, padding: '10px 14px', marginBottom: 6 }}>
+              <div><b>{p.creators ? p.creators.name : 'Someone'}</b><p className="dim" style={{ margin: '2px 0 0' }}>{p.message}</p></div>
+              <button className="btn ghost" style={{ borderColor: 'var(--pink)', color: 'var(--pink)' }} onClick={() => removePost(p.id)}>Remove</button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <form className="card" onSubmit={addCreator} onKeyDown={focusNext}>
         <h2>Add a Creator</h2>
         <p className="dim">Add someone directly — give them the starting PIN so they can log in and change it themselves later.</p>
         <div className="row">
-          <div className="field" style={{ flex: 1 }}><label>Name</label><input value={addForm.name} onChange={(e) => setAddForm({ ...addForm, name: e.target.value })} /></div>
+          <div className="field" style={{ flex: 1 }}><label>Nickname</label><input value={addForm.name} onChange={(e) => setAddForm({ ...addForm, name: e.target.value })} /></div>
           <div className="field" style={{ flex: 1 }}><label>TikTok Handle</label><input value={addForm.handle} onChange={(e) => setAddForm({ ...addForm, handle: e.target.value })} /></div>
           <div className="field" style={{ flex: 1 }}><label>Diamonds (30d)</label><input type="number" value={addForm.diamonds} onChange={(e) => setAddForm({ ...addForm, diamonds: Number(e.target.value) })} /></div>
         </div>

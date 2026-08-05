@@ -2,7 +2,8 @@ import { supabaseAdmin } from '../../lib/supabaseAdmin';
 import { zoneByCode, zonedTimeToUtc } from '../../lib/constants';
 import { notifyCreator } from '../../lib/push';
 import { readSession, COOKIES } from '../../lib/session';
-import { getAgencyStatus, canWrite } from '../../lib/agencyStatus';
+import { canWrite } from '../../lib/agencyStatus';
+import { getAgencyStatus } from '../../lib/agencyStatusDb';
 
 export default async function handler(req, res) {
   const creatorSession = readSession(req, COOKIES.CREATOR);

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ZONES, BATTLE_TYPES, LEAGUE_OPTIONS, zoneByCode } from '../lib/constants';
 import { enablePushNotifications } from '../lib/pushClient';
+import { downloadICS, googleCalendarUrl } from '../lib/calendarClient';
 
 function tzLabel(code) { return zoneByCode(code).code; }
 function tiktokUrl(handle) { return 'https://www.tiktok.com/@' + (handle || '').replace(/^@/, ''); }
@@ -23,6 +24,11 @@ export default function Home() {
     if (!aid) return;
     try {
       const [cRes, bRes] = await Promise.all([fetch('/api/creators'), fetch('/api/battles')]);
+      if (cRes.status === 402 || bRes.status === 402) {
+        setAgency(null); setMyId(null); setCreators([]); setBattles([]); setStep('profile');
+        setAgencyError('This agency\u2019s account is inactive. Contact your agency admin.');
+        return;
+      }
       if (cRes.ok) setCreators(await cRes.json());
       if (bRes.ok) setBattles(await bRes.json());
     } catch (e) { console.error('refresh failed', e); }
@@ -40,11 +46,14 @@ export default function Home() {
           setLoading(false);
           return;
         }
+        if (sessRes.status === 402) { const d = await sessRes.json(); setAgencyError(d.error); setLoading(false); return; }
         const agencyRes = await fetch('/api/agency-session');
         if (agencyRes.ok) {
           const a = await agencyRes.json();
           setAgency({ id: a.id, name: a.name });
           await refresh(a.id);
+        } else if (agencyRes.status === 402) {
+          const d = await agencyRes.json(); setAgencyError(d.error);
         }
       } catch (e) {
         console.error('session check failed', e);
@@ -136,6 +145,8 @@ export default function Home() {
         <button className={step === 'battles' ? 'active' : ''} disabled={!me} onClick={() => setStep('battles')}>4 · Your Battles</button>
       </div>
 
+      {me && <PushReminder />}
+
       {step === 'profile' && (
         <ProfileStep
           me={me} creators={creators} pinAttempt={pinAttempt} setPinAttempt={setPinAttempt}
@@ -149,6 +160,39 @@ export default function Home() {
       {step === 'battles' && me && (
         <BattlesStep me={me} creators={creators} battles={battles} onChange={refresh} />
       )}
+    </div>
+  );
+}
+
+function PushReminder() {
+  const [status, setStatus] = useState('checking');
+  const [dismissed, setDismissed] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('Notification' in window)) { setStatus('unsupported'); return; }
+    setStatus(Notification.permission); // 'default' | 'granted' | 'denied'
+  }, []);
+
+  async function enable() {
+    setBusy(true);
+    try { await enablePushNotifications(); setStatus('granted'); }
+    catch (e) { alert(e.message); }
+    setBusy(false);
+  }
+
+  if (status === 'granted' || status === 'unsupported' || dismissed) return null;
+
+  return (
+    <div className="card" style={{ borderColor: 'var(--gold)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+      <div>
+        <b>🔔 Turn on notifications</b>
+        <p className="dim" style={{ margin: '4px 0 0' }}>Get alerted the moment a battle's proposed or confirmed — no need to keep checking back.</p>
+      </div>
+      <div className="row">
+        <button className="btn" disabled={busy} onClick={enable}>Enable Now</button>
+        <button className="btn ghost" onClick={() => setDismissed(true)}>Not now</button>
+      </div>
     </div>
   );
 }
@@ -198,7 +242,7 @@ function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogi
       <form className="card" onSubmit={save} onKeyDown={focusNext}>
         <h2>My Profile</h2>
         <div className="row">
-          <div className="field" style={{ flex: 1 }}><label>Name</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+          <div className="field" style={{ flex: 1 }}><label>Nickname</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
           <div className="field" style={{ flex: 1 }}><label>TikTok Handle</label><input value={form.handle} onChange={(e) => setForm({ ...form, handle: e.target.value })} /></div>
         </div>
         <div className="row">
@@ -239,7 +283,7 @@ function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogi
   return (
     <div className="card">
       <h2>Who are you?</h2>
-      <p className="dim">Pick your name and enter your PIN, or create a new profile below. Once you log in, this browser will remember you for 30 days.</p>
+      <p className="dim">Pick your nickname and enter your PIN, or create a new profile below. Once you log in, this browser will remember you for 30 days.</p>
       {creators.map((c) => (
         <div key={c.id} style={{ marginBottom: 8 }}>
           {pinAttempt.id === c.id ? (
@@ -261,7 +305,7 @@ function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogi
       <h2 style={{ fontSize: 16 }}>Create a new profile</h2>
       <form onKeyDown={focusNext} onSubmit={(e) => { e.preventDefault(); if (!form.name || !form.pin) { alert('Name and PIN are required.'); return; } onCreate(form); }}>
         <div className="row">
-          <div className="field" style={{ flex: 1 }}><label>Name</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+          <div className="field" style={{ flex: 1 }}><label>Nickname</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
           <div className="field" style={{ flex: 1 }}><label>TikTok Handle</label><input value={form.handle} onChange={(e) => setForm({ ...form, handle: e.target.value })} /></div>
         </div>
         <div className="row">
@@ -352,6 +396,13 @@ function BoardStep({ me }) {
     load();
   }
 
+  async function report(id) {
+    if (!confirm('Report this post to your agency admin?')) return;
+    await fetch(`/api/posts/${id}`, { method: 'PATCH' });
+    alert('Reported.');
+    load();
+  }
+
   return (
     <div>
       <form className="card" onSubmit={post}>
@@ -365,9 +416,13 @@ function BoardStep({ me }) {
           <div>
             <b>{p.creators ? p.creators.name : 'Someone'}</b>
             <span className="dim"> · {new Date(p.created_at).toLocaleString()}</span>
+            {p.reported && <span className="badge" style={{ marginLeft: 6, borderColor: 'var(--pink)', color: 'var(--pink)' }}>Reported</span>}
             <p style={{ margin: '6px 0 0' }}>{p.message}</p>
           </div>
-          {p.creator_id === me.id && <button className="btn ghost" style={{ borderColor: 'var(--pink)', color: 'var(--pink)', flexShrink: 0 }} onClick={() => remove(p.id)}>Delete</button>}
+          <div className="row" style={{ flexShrink: 0 }}>
+            {p.creator_id !== me.id && !p.reported && <button className="btn ghost" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => report(p.id)}>Report</button>}
+            {p.creator_id === me.id && <button className="btn ghost" style={{ borderColor: 'var(--pink)', color: 'var(--pink)' }} onClick={() => remove(p.id)}>Delete</button>}
+          </div>
         </div>
       ))}
     </div>
@@ -458,7 +513,16 @@ function BattlesStep({ me, creators, battles, onChange }) {
           <div className="side b">{nameOf(b.creator_b)}<br /><a className="dim" href={tiktokUrl(handleOf(b.creator_b))} target="_blank" rel="noopener noreferrer">TikTok ↗</a></div>
           <div style={{ padding: 12 }}>
             <div className="dim">{new Date(b.datetime_utc).toLocaleString()}</div>
-            <button className="btn ghost" onClick={() => remove(b.id)}>Remove</button>
+            <div className="row" style={{ marginTop: 8 }}>
+              <button className="btn ghost" style={{ fontSize: 12, padding: '6px 10px' }} onClick={() => downloadICS({
+                id: b.id, title: `${nameOf(b.creator_a)} vs ${nameOf(b.creator_b)} — TikTok LIVE Battle`, notes: b.notes, startUTC: b.datetime_utc
+              })}>＋ Add to Calendar</button>
+              <a className="btn ghost" style={{ fontSize: 12, padding: '6px 10px', textDecoration: 'none', display: 'inline-block' }} target="_blank" rel="noopener noreferrer"
+                href={googleCalendarUrl({ title: `${nameOf(b.creator_a)} vs ${nameOf(b.creator_b)} — TikTok LIVE Battle`, notes: b.notes, startUTC: b.datetime_utc })}>
+                ＋ Google Calendar
+              </a>
+              <button className="btn ghost" style={{ fontSize: 12, padding: '6px 10px' }} onClick={() => remove(b.id)}>Remove</button>
+            </div>
           </div>
         </div>
       ))}
