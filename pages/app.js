@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { ZONES, BATTLE_TYPES, LEAGUE_OPTIONS, zoneByCode } from '../lib/constants';
 import { enablePushNotifications } from '../lib/pushClient';
 import { downloadICS, googleCalendarUrl } from '../lib/calendarClient';
+import Avatar from '../components/Avatar';
+import PasswordField from '../components/PasswordField';
+import DateTimePicker from '../components/DateTimePicker';
 
 function tzLabel(code) { return zoneByCode(code).code; }
 function tiktokUrl(handle) { return 'https://www.tiktok.com/@' + (handle || '').replace(/^@/, ''); }
@@ -126,7 +129,7 @@ export default function Home() {
 
   return (
     <div className="wrap">
-      <header style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
         <div>
           <h1>BATTLE ROOM</h1>
           <div className="dim">{agency.name} · Live PK Schedule</div>
@@ -181,13 +184,16 @@ function PushReminder() {
     setBusy(false);
   }
 
-  if (status === 'granted' || status === 'unsupported' || dismissed) return null;
+  if (status === 'granted' || dismissed) return null;
 
   return (
     <div className="card" style={{ borderColor: 'var(--gold)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
       <div>
         <b>🔔 Turn on notifications</b>
-        <p className="dim" style={{ margin: '4px 0 0' }}>Get alerted the moment a battle's proposed or confirmed — no need to keep checking back.</p>
+        <p className="dim" style={{ margin: '4px 0 0' }}>
+          Get alerted the moment a battle's proposed or confirmed — no need to keep checking back.
+          {status === 'unsupported' && <> On iPhone: tap Share → "Add to Home Screen" first, then reopen from there.</>}
+        </p>
       </div>
       <div className="row">
         <button className="btn" disabled={busy} onClick={enable}>Enable Now</button>
@@ -213,12 +219,54 @@ function focusNext(e) {
   else form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event('submit', { cancelable: true }));
 }
 
+function AvatarUploader({ me, onUploaded }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  function handleFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setError('');
+    setBusy(true);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const res = await fetch('/api/upload-avatar', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dataUrl: reader.result })
+        });
+        const data = await res.json();
+        if (!res.ok) { setError(data.error || 'Upload failed.'); setBusy(false); return; }
+        onUploaded(data.avatar_url);
+      } catch (err) { setError('Upload failed.'); }
+      setBusy(false);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  return (
+    <div className="field">
+      <label>Profile picture (optional)</label>
+      <div className="row" style={{ alignItems: 'center' }}>
+        <Avatar url={me?.avatar_url} name={me?.name} size={56} />
+        <label className="btn ghost" style={{ cursor: 'pointer' }}>
+          {busy ? 'Uploading…' : 'Choose photo'}
+          <input type="file" accept="image/*" onChange={handleFile} style={{ display: 'none' }} disabled={busy} />
+        </label>
+      </div>
+      {error && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{error}</p>}
+    </div>
+  );
+}
+
 function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogin, onSaved }) {
   const [form, setForm] = useState(() => me
-    ? { name: me.name, handle: me.handle || '', email: me.email || '', diamonds: me.diamonds || 0, league: me.league || '', tz: me.tz || 'ET', tags: me.tags || [], pin: '' }
-    : { name: '', handle: '', email: '', diamonds: 0, league: '', tz: 'ET', tags: [], pin: '' }
+    ? { name: me.name, handle: me.handle || '', diamonds: me.diamonds || 0, league: me.league || '', tz: me.tz || 'ET', tags: me.tags || [], pin: '', currentPin: '' }
+    : { name: '', handle: '', diamonds: 0, league: '', tz: 'ET', tags: [], pin: '' }
   );
   const [pushStatus, setPushStatus] = useState('');
+  const [saveError, setSaveError] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState(me?.avatar_url || null);
 
   function toggleTag(key) {
     setForm((f) => ({ ...f, tags: f.tags.includes(key) ? f.tags.filter((t) => t !== key) : [...f.tags, key] }));
@@ -226,10 +274,14 @@ function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogi
 
   async function save(e) {
     if (e) e.preventDefault();
+    setSaveError('');
+    if (form.pin && !form.currentPin) { setSaveError('Enter your current PIN to set a new one.'); return; }
     const res = await fetch(`/api/creators/${me.id}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form)
     });
-    if (res.ok) { onSaved(); alert('Saved.'); } else { alert('Save failed.'); }
+    const data = await res.json();
+    if (res.ok) { onSaved(); setForm((f) => ({ ...f, pin: '', currentPin: '' })); alert('Saved.'); }
+    else { setSaveError(data.error || 'Save failed.'); }
   }
 
   async function turnOnPush() {
@@ -241,12 +293,17 @@ function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogi
     return (
       <form className="card" onSubmit={save} onKeyDown={focusNext}>
         <h2>My Profile</h2>
+        <AvatarUploader me={{ ...me, avatar_url: avatarUrl }} onUploaded={setAvatarUrl} />
         <div className="row">
           <div className="field" style={{ flex: 1 }}><label>Nickname</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-          <div className="field" style={{ flex: 1 }}><label>TikTok Handle</label><input value={form.handle} onChange={(e) => setForm({ ...form, handle: e.target.value })} /></div>
+          <div className="field" style={{ flex: 1 }}><label>TikTok Handle</label><input value={form.handle} onChange={(e) => setForm({ ...form, handle: e.target.value })} placeholder="e.g. miachen.live (no @ needed)" />
+            <div className="dim">No need to include the @ — just the handle itself.</div>
+          </div>
         </div>
         <div className="row">
-          <div className="field" style={{ flex: 1 }}><label>Diamonds (30d)</label><input type="number" value={form.diamonds} onChange={(e) => setForm({ ...form, diamonds: Number(e.target.value) })} /></div>
+          <div className="field" style={{ flex: 1 }}><label>Diamonds (30d)</label><input type="number" value={form.diamonds} onChange={(e) => setForm({ ...form, diamonds: Number(e.target.value) })} placeholder="e.g. 10000" />
+            <div className="dim">Just the number, e.g. 10000</div>
+          </div>
           <div className="field" style={{ flex: 1 }}><label>League</label>
             <select value={form.league} onChange={(e) => setForm({ ...form, league: e.target.value })}>
               <option value="">Select…</option>
@@ -259,18 +316,25 @@ function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogi
             </select>
           </div>
         </div>
-        <div className="field"><label>Email (optional, for battle notifications)</label><input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
         <div className="field">
           <label>Battle types you do</label>
           <div className="row">
             {BATTLE_TYPES.map((t) => (
-              <label key={t.key} className="dim" style={{ display: 'flex', gap: 6, alignItems: 'center', background: 'var(--bg-raised)', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--line)' }}>
+              <label key={t.key} className="chip">
                 <input type="checkbox" checked={form.tags.includes(t.key)} onChange={() => toggleTag(t.key)} /> {t.label}
               </label>
             ))}
           </div>
         </div>
-        <div className="field"><label>New PIN (leave blank to keep current)</label><input type="password" maxLength={20} onChange={(e) => setForm({ ...form, pin: e.target.value })} /></div>
+        <div className="row">
+          <div className="field" style={{ flex: 1 }}><label>Current PIN (required to set a new one)</label>
+            <PasswordField value={form.currentPin || ''} onChange={(e) => setForm({ ...form, currentPin: e.target.value })} placeholder="Current PIN" />
+          </div>
+          <div className="field" style={{ flex: 1 }}><label>New PIN (leave blank to keep current)</label>
+            <PasswordField value={form.pin} onChange={(e) => setForm({ ...form, pin: e.target.value })} maxLength={20} placeholder="New PIN" />
+          </div>
+        </div>
+        {saveError && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{saveError}</p>}
         <div className="row" style={{ justifyContent: 'space-between', marginTop: 10 }}>
           <button className="btn ghost" type="button" onClick={turnOnPush}>🔔 Enable push notifications</button>
           <button className="btn" type="submit">Save changes</button>
@@ -289,13 +353,16 @@ function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogi
           {pinAttempt.id === c.id ? (
             <form className="row" style={{ alignItems: 'center' }} onSubmit={(e) => { e.preventDefault(); onLogin(c.id, pinAttempt.value); }}>
               <span>{c.name}</span>
-              <input type="password" style={{ maxWidth: 140 }} value={pinAttempt.value}
-                onChange={(e) => setPinAttempt({ ...pinAttempt, value: e.target.value })} placeholder="PIN" autoFocus />
+              <div style={{ maxWidth: 160 }}>
+                <PasswordField value={pinAttempt.value} onChange={(e) => setPinAttempt({ ...pinAttempt, value: e.target.value })} placeholder="PIN" autoFocus />
+              </div>
               <button className="btn" type="submit" style={{ padding: '6px 12px' }}>Unlock</button>
               <button className="btn ghost" type="button" style={{ padding: '6px 12px' }} onClick={() => setPinAttempt({ id: null, value: '', error: '' })}>Cancel</button>
             </form>
           ) : (
-            <button className="btn ghost" style={{ width: '100%', textAlign: 'left' }} onClick={() => setPinAttempt({ id: c.id, value: '', error: '' })}>{c.name} — {c.handle}</button>
+            <button className="btn ghost" style={{ width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10 }} onClick={() => setPinAttempt({ id: c.id, value: '', error: '' })}>
+              <Avatar url={c.avatar_url} name={c.name} size={28} /> {c.name} — {c.handle}
+            </button>
           )}
         </div>
       ))}
@@ -303,13 +370,17 @@ function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogi
 
       <hr style={{ border: 'none', borderTop: '1px solid var(--line)', margin: '16px 0' }} />
       <h2 style={{ fontSize: 16 }}>Create a new profile</h2>
-      <form onKeyDown={focusNext} onSubmit={(e) => { e.preventDefault(); if (!form.name || !form.pin) { alert('Name and PIN are required.'); return; } onCreate(form); }}>
+      <form onKeyDown={focusNext} onSubmit={(e) => { e.preventDefault(); if (!form.name || !form.pin) { alert('Nickname and PIN are required.'); return; } onCreate(form); }}>
         <div className="row">
           <div className="field" style={{ flex: 1 }}><label>Nickname</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-          <div className="field" style={{ flex: 1 }}><label>TikTok Handle</label><input value={form.handle} onChange={(e) => setForm({ ...form, handle: e.target.value })} /></div>
+          <div className="field" style={{ flex: 1 }}><label>TikTok Handle</label><input value={form.handle} onChange={(e) => setForm({ ...form, handle: e.target.value })} placeholder="e.g. miachen.live (no @ needed)" />
+            <div className="dim">No need to include the @ — just the handle itself.</div>
+          </div>
         </div>
         <div className="row">
-          <div className="field" style={{ flex: 1 }}><label>Diamonds (30d)</label><input type="number" value={form.diamonds} onChange={(e) => setForm({ ...form, diamonds: Number(e.target.value) })} /></div>
+          <div className="field" style={{ flex: 1 }}><label>Diamonds (30d)</label><input type="number" value={form.diamonds} onChange={(e) => setForm({ ...form, diamonds: Number(e.target.value) })} placeholder="e.g. 10000" />
+            <div className="dim">Just the number, e.g. 10000</div>
+          </div>
           <div className="field" style={{ flex: 1 }}><label>League</label>
             <select value={form.league} onChange={(e) => setForm({ ...form, league: e.target.value })}>
               <option value="">Select…</option>
@@ -322,20 +393,22 @@ function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogi
             </select>
           </div>
         </div>
-        <div className="field"><label>Email (optional)</label><input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
         <div className="field">
           <label>Battle types you do</label>
           <div className="row">
             {BATTLE_TYPES.map((t) => (
-              <label key={t.key} className="dim" style={{ display: 'flex', gap: 6, alignItems: 'center', background: 'var(--bg-raised)', padding: '6px 10px', borderRadius: 8, border: '1px solid var(--line)' }}>
+              <label key={t.key} className="chip">
                 <input type="checkbox" checked={form.tags.includes(t.key)} onChange={() => toggleTag(t.key)} /> {t.label}
               </label>
             ))}
           </div>
         </div>
-        <div className="field"><label>Set a PIN (6+ characters)</label><input type="password" minLength={6} value={form.pin} onChange={(e) => setForm({ ...form, pin: e.target.value })} /></div>
+        <div className="field"><label>Set a PIN (6+ characters)</label>
+          <PasswordField value={form.pin} onChange={(e) => setForm({ ...form, pin: e.target.value })} minLength={6} placeholder="Choose a PIN" />
+        </div>
         <button className="btn" type="submit">Create Profile &amp; Continue</button>
       </form>
+      <p className="dim" style={{ marginTop: 10 }}>You can add a profile picture from the Profile tab after your account is created.</p>
     </div>
   );
 }
@@ -350,15 +423,21 @@ function OpponentsStep({ me, creators, onPropose }) {
 
   return (
     <div>
-      <div className="card">
-        <b>You:</b> {me.name} · {(me.diamonds || 0).toLocaleString()} 💎 · {me.league || '—'} · {tzLabel(me.tz)}
+      <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <Avatar url={me.avatar_url} name={me.name} size={36} />
+        <div><b>You:</b> {me.name} · {(me.diamonds || 0).toLocaleString()} 💎 · {me.league || '—'} · {tzLabel(me.tz)}</div>
       </div>
       <div className="opp-grid">
         {scored.map(({ s }) => (
           <div key={s.id} className="card">
-            <div style={{ fontWeight: 700 }}>{s.name}</div>
-            <div className="dim">{s.handle}</div>
-            <div>{(s.diamonds || 0).toLocaleString()} 💎</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Avatar url={s.avatar_url} name={s.name} size={40} />
+              <div>
+                <div style={{ fontWeight: 700 }}>{s.name}</div>
+                <div className="dim">{s.handle}</div>
+              </div>
+            </div>
+            <div style={{ marginTop: 8 }}>{(s.diamonds || 0).toLocaleString()} 💎</div>
             <div className="dim">{s.league || '—'} · {tzLabel(s.tz)}</div>
             <div className="row" style={{ marginTop: 6 }}>{(s.tags || []).map((t) => <span key={t} className="badge">{t}</span>)}</div>
             <a className="dim" href={tiktokUrl(s.handle)} target="_blank" rel="noopener noreferrer">View on TikTok ↗</a>
@@ -374,24 +453,43 @@ function BoardStep({ me }) {
   const [posts, setPosts] = useState([]);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [posting, setPosting] = useState(false);
+  const [error, setError] = useState('');
 
   async function load() {
-    const res = await fetch('/api/posts');
-    if (res.ok) setPosts(await res.json());
+    try {
+      const res = await fetch('/api/posts');
+      if (res.ok) setPosts(await res.json());
+    } catch (e) { console.error('load posts failed', e); }
     setLoading(false);
   }
   useEffect(() => { load(); }, []);
 
   async function post(e) {
     if (e) e.preventDefault();
+    setError('');
     if (!message.trim()) return;
-    const res = await fetch('/api/posts', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message })
-    });
-    if (res.ok) { setMessage(''); load(); } else { const d = await res.json(); alert(d.error || 'Could not post.'); }
+    setPosting(true);
+    try {
+      const res = await fetch('/api/posts', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message })
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Could not post.'); setPosting(false); return; }
+      // Show it immediately instead of waiting on a full reload — fixes the
+      // "nothing shows up after posting" issue by not depending on a second
+      // round trip succeeding to render anything.
+      setPosts((prev) => [{ ...data, creators: { name: me.name, handle: me.handle }, reported: false }, ...prev]);
+      setMessage('');
+      load(); // reconcile with the server in the background
+    } catch (err) {
+      setError('Network error — please try again.');
+    }
+    setPosting(false);
   }
 
   async function remove(id) {
+    setPosts((prev) => prev.filter((p) => p.id !== id)); // optimistic
     await fetch(`/api/posts/${id}`, { method: 'DELETE' });
     load();
   }
@@ -409,15 +507,19 @@ function BoardStep({ me }) {
         <h2>Find a Battle</h2>
         <p className="dim">Post what you're looking for — like an LFG board. Anyone in your agency can see it, and only you (or an admin) can delete your post.</p>
         <div className="field"><label>Your post</label><input value={message} onChange={(e) => setMessage(e.target.value)} maxLength={280} placeholder="e.g. Looking for a chill battle tonight around 8pm ET" /></div>
-        <button className="btn" type="submit">Post</button>
+        {error && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{error}</p>}
+        <button className="btn" type="submit" disabled={posting}>{posting ? 'Posting…' : 'Post'}</button>
       </form>
       {loading ? <p className="dim">Loading…</p> : posts.length === 0 ? <p className="dim">No posts yet — be the first.</p> : posts.map((p) => (
         <div key={p.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
-          <div>
-            <b>{p.creators ? p.creators.name : 'Someone'}</b>
-            <span className="dim"> · {new Date(p.created_at).toLocaleString()}</span>
-            {p.reported && <span className="badge" style={{ marginLeft: 6, borderColor: 'var(--pink)', color: 'var(--pink)' }}>Reported</span>}
-            <p style={{ margin: '6px 0 0' }}>{p.message}</p>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+            <Avatar url={p.creators?.avatar_url} name={p.creators ? p.creators.name : '?'} size={32} />
+            <div>
+              <b>{p.creators ? p.creators.name : 'Someone'}</b>
+              <span className="dim"> · {new Date(p.created_at).toLocaleString()}</span>
+              {p.reported && <span className="badge" style={{ marginLeft: 6, borderColor: 'var(--pink)', color: 'var(--pink)' }}>Reported</span>}
+              <p style={{ margin: '6px 0 0' }}>{p.message}</p>
+            </div>
           </div>
           <div className="row" style={{ flexShrink: 0 }}>
             {p.creator_id !== me.id && !p.reported && <button className="btn ghost" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => report(p.id)}>Report</button>}
@@ -470,7 +572,9 @@ function BattlesStep({ me, creators, battles, onChange }) {
               {creators.filter((c) => c.id !== me.id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
-          <div className="field" style={{ flex: 1 }}><label>Date &amp; Time</label><input type="datetime-local" value={form.datetime} onChange={(e) => setForm({ ...form, datetime: e.target.value })} /></div>
+          <div className="field" style={{ flex: 2 }}><label>Date &amp; Time (your local time)</label>
+            <DateTimePicker value={form.datetime} onChange={(v) => setForm({ ...form, datetime: v })} />
+          </div>
           <div className="field" style={{ flex: 1 }}><label>Time zone for this time</label>
             <select value={form.tz} onChange={(e) => setForm({ ...form, tz: e.target.value })}>
               {ZONES.map((z) => <option key={z.code} value={z.code}>{z.label}</option>)}

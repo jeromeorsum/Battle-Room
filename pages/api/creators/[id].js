@@ -20,14 +20,23 @@ export default async function handler(req, res) {
   if (!isSelf && !isAgencyAdmin) return res.status(403).json({ error: 'Not authorized to modify this profile.' });
 
   if (req.method === 'PUT') {
-    const { name, handle, email, diamonds, league, tz, tags, pin } = req.body;
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'That doesn\u2019t look like a valid email address.' });
+    const { name, handle, diamonds, league, tz, tags, pin, currentPin, avatar_url } = req.body;
+    const cleanHandle = handle ? handle.trim().replace(/^@+/, '') : null;
     const update = {
-      name, handle: handle || null, email: email || null,
+      name, handle: cleanHandle,
       diamonds: diamonds || 0, league: league || null, tz: tz || 'ET', tags: tags || []
     };
+    if (avatar_url !== undefined) update.avatar_url = avatar_url || null;
     if (pin) {
       if (String(pin).length < 6) return res.status(400).json({ error: 'PIN must be at least 6 characters.' });
+      // If you're changing your own PIN, you must prove you know the
+      // current one first. An admin resetting someone else's PIN (isSelf
+      // false) skips this — they're already a higher authority.
+      if (isSelf) {
+        const { data: current } = await supabaseAdmin.from('creators').select('pin_hash').eq('id', id).single();
+        const ok = current && await bcrypt.compare(String(currentPin || ''), current.pin_hash);
+        if (!ok) return res.status(401).json({ error: 'Current PIN is incorrect.' });
+      }
       update.pin_hash = await bcrypt.hash(String(pin), 12);
     }
 
@@ -35,7 +44,7 @@ export default async function handler(req, res) {
       .from('creators')
       .update(update)
       .eq('id', id)
-      .select('id, name, handle, email, diamonds, league, tz, tags')
+      .select('id, name, handle, diamonds, league, tz, tags, avatar_url')
       .single();
     if (error) return res.status(500).json({ error: error.message });
     return res.status(200).json(data);

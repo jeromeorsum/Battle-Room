@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { PRICING_TIERS } from '../lib/pricing';
+import PasswordField from '../components/PasswordField';
 
 export default function Signup() {
   const [billingPeriod, setBillingPeriod] = useState('monthly');
@@ -72,7 +73,9 @@ export default function Signup() {
         <div className="field"><label>Agency name</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
         <div className="field"><label>Contact email (required — for billing/account questions)</label><input type="email" required value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} /></div>
         <div className="field"><label>Contact phone (required)</label><input type="tel" required value={form.contactPhone} onChange={(e) => setForm({ ...form, contactPhone: e.target.value })} /></div>
-        <div className="field"><label>Choose an admin code (you'll use this to manage battles)</label><input type="password" value={form.adminCode} onChange={(e) => setForm({ ...form, adminCode: e.target.value })} /></div>
+        <div className="field"><label>Choose an admin code (you'll use this to manage battles)</label>
+          <PasswordField value={form.adminCode} onChange={(e) => setForm({ ...form, adminCode: e.target.value })} />
+        </div>
 
         <div className="field">
           <label>Plan</label>

@@ -1,5 +1,6 @@
 import { Component, useEffect, useState } from 'react';
 import '../styles/globals.css';
+import NavMenu from '../components/NavMenu';
 
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null }; }
@@ -41,6 +42,7 @@ export default function App({ Component, pageProps }) {
 
   return (
     <>
+      <NavMenu />
       <ErrorBoundary>
         <Component {...pageProps} />
       </ErrorBoundary>

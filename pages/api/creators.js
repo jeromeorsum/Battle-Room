@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     if (!agencyId) return;
     const { data, error } = await supabaseAdmin
       .from('creators')
-      .select('id, name, handle, email, diamonds, league, tz, tags, created_at')
+      .select('id, name, handle, diamonds, league, tz, tags, avatar_url, created_at')
       .eq('agency_id', agencyId)
       .order('created_at', { ascending: true });
     if (error) return res.status(500).json({ error: error.message });
@@ -29,10 +29,9 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     const agencyId = requireAgencyScope(req, res);
     if (!agencyId) return;
-    const { name, handle, email, diamonds, league, tz, tags, pin } = req.body;
+    const { name, handle, diamonds, league, tz, tags, pin } = req.body;
     if (!name || !pin) return res.status(400).json({ error: 'Name and PIN are required.' });
     if (String(pin).length < 6) return res.status(400).json({ error: 'PIN must be at least 6 characters.' });
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'That doesn\u2019t look like a valid email address.' });
 
     const { data: agency, error: agencyErr } = await supabaseAdmin
       .from('agencies').select('id, max_creators, status').eq('id', agencyId).single();
@@ -44,15 +43,16 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: "This agency has reached its plan's creator limit." });
     }
 
+    const cleanHandle = handle ? handle.trim().replace(/^@+/, '') : null;
     const pin_hash = await bcrypt.hash(String(pin), 12);
     const { data, error } = await supabaseAdmin
       .from('creators')
       .insert({
-        agency_id: agencyId, name, handle: handle || null, email: email || null,
+        agency_id: agencyId, name, handle: cleanHandle,
         diamonds: diamonds || 0, league: league || null, tz: tz || 'ET',
         tags: tags || [], pin_hash
       })
-      .select('id, name, handle, email, diamonds, league, tz, tags')
+      .select('id, name, handle, diamonds, league, tz, tags, avatar_url')
       .single();
     if (error) return res.status(500).json({ error: error.message });
 

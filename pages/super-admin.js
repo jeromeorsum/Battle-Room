@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { PRICING_TIERS, tierById } from '../lib/pricing';
+import PasswordField from '../components/PasswordField';
 
 export default function SuperAdmin() {
   const [code, setCode] = useState('');
@@ -49,7 +50,7 @@ export default function SuperAdmin() {
         <form className="card" style={{ maxWidth: 360, margin: '60px auto' }} onSubmit={submitLogin}>
           <h2>Super Admin</h2>
           <p className="dim">This code is set as the SUPER_ADMIN_CODE environment variable — only you should know it.</p>
-          <input type="password" value={code} onChange={(e) => setCode(e.target.value)} placeholder="Super admin code" />
+          <PasswordField value={code} onChange={(e) => setCode(e.target.value)} placeholder="Super admin code" />
           {error && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{error}</p>}
           <button className="btn" type="submit" style={{ marginTop: 10 }}>Unlock</button>
         </form>

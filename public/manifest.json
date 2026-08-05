@@ -1,0 +1,11 @@
+{
+  "name": "Battle Room",
+  "short_name": "Battle Room",
+  "start_url": "/app",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }
+  ]
+}

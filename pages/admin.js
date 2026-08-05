@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { ZONES, BATTLE_TYPES, LEAGUE_OPTIONS, zoneByCode } from '../lib/constants';
 import { PRICING_TIERS } from '../lib/pricing';
+import Avatar from '../components/Avatar';
+import PasswordField from '../components/PasswordField';
+import DateTimePicker from '../components/DateTimePicker';
 
 export default function Admin() {
   const [agency, setAgency] = useState(null);
@@ -15,28 +18,11 @@ export default function Admin() {
   const [addForm, setAddForm] = useState({ name: '', handle: '', diamonds: 0, league: '', tz: 'ET', pin: '' });
   const [addError, setAddError] = useState('');
   const [billingLoading, setBillingLoading] = useState(false);
-
-  async function startCheckout(planTier, billingPeriod) {
-    setBillingLoading(true);
-    try {
-      const res = await fetch('/api/checkout', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ planTier, billingPeriod })
-      });
-      const data = await res.json();
-      if (!res.ok) { alert(data.error || 'Could not start checkout.'); setBillingLoading(false); return; }
-      window.location.href = data.url;
-    } catch (e) { alert('Network error.'); setBillingLoading(false); }
-  }
-
-  async function openBillingPortal() {
-    setBillingLoading(true);
-    try {
-      const res = await fetch('/api/create-portal-session', { method: 'POST' });
-      const data = await res.json();
-      if (!res.ok) { alert(data.error || 'Could not open billing portal.'); setBillingLoading(false); return; }
-      window.location.href = data.url;
-    } catch (e) { alert('Network error.'); setBillingLoading(false); }
-  }
+  const [codeForm, setCodeForm] = useState({ current: '', next: '' });
+  const [codeMsg, setCodeMsg] = useState('');
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotForm, setForgotForm] = useState({ agencyCode: '', contactEmail: '' });
+  const [forgotMsg, setForgotMsg] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -92,15 +78,41 @@ export default function Admin() {
     else alert('Could not remove creator.');
   }
 
+  async function resetCreatorPin(id, name) {
+    const newPin = prompt(`Set a new temporary PIN for ${name} (6+ characters). Tell them this PIN so they can log in and change it themselves.`);
+    if (!newPin) return;
+    if (newPin.length < 6) { alert('PIN must be at least 6 characters.'); return; }
+    const creator = creators.find((c) => c.id === id);
+    const res = await fetch(`/api/creators/${id}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: creator.name, handle: creator.handle, diamonds: creator.diamonds, league: creator.league, tz: creator.tz, tags: creator.tags, pin: newPin })
+    });
+    if (res.ok) alert(`New PIN set for ${name}.`); else alert('Could not reset PIN.');
+  }
+
   async function removePost(id) {
     await fetch(`/api/posts/${id}`, { method: 'DELETE' });
     loadRoster();
   }
 
+  async function changeAdminCode(e) {
+    if (e) e.preventDefault();
+    setCodeMsg('');
+    if (!codeForm.current || !codeForm.next) { setCodeMsg('Fill in both fields.'); return; }
+    const res = await fetch('/api/admin/change-code', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentCode: codeForm.current, newCode: codeForm.next })
+    });
+    const data = await res.json();
+    if (!res.ok) { setCodeMsg(data.error || 'Could not change code.'); return; }
+    setCodeMsg('Admin code updated.');
+    setCodeForm({ current: '', next: '' });
+  }
+
   async function addCreator(e) {
     if (e) e.preventDefault();
     setAddError('');
-    if (!addForm.name || !addForm.pin) { setAddError('Name and a starting PIN are required.'); return; }
+    if (!addForm.name || !addForm.pin) { setAddError('Nickname and a starting PIN are required.'); return; }
     if (addForm.pin.length < 6) { setAddError('PIN must be at least 6 characters.'); return; }
     const res = await fetch('/api/creators', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(addForm)
@@ -120,6 +132,38 @@ export default function Admin() {
     });
     if (res.ok) { loadRoster(); setBookForm({ a: '', b: '', datetime: '', tz: 'ET', notes: '' }); }
     else { const d = await res.json(); alert(d.error || 'Could not book battle.'); }
+  }
+
+  async function startCheckout(planTier, billingPeriod) {
+    setBillingLoading(true);
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ planTier, billingPeriod })
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || 'Could not start checkout.'); setBillingLoading(false); return; }
+      window.location.href = data.url;
+    } catch (e) { alert('Network error.'); setBillingLoading(false); }
+  }
+
+  async function openBillingPortal() {
+    setBillingLoading(true);
+    try {
+      const res = await fetch('/api/create-portal-session', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || 'Could not open billing portal.'); setBillingLoading(false); return; }
+      window.location.href = data.url;
+    } catch (e) { alert('Network error.'); setBillingLoading(false); }
+  }
+
+  async function submitForgot(e) {
+    if (e) e.preventDefault();
+    setForgotMsg('');
+    const res = await fetch('/api/forgot-admin-code', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(forgotForm)
+    });
+    const data = await res.json();
+    setForgotMsg(data.message || data.error || 'Request sent.');
   }
 
   function focusNext(e) {
@@ -143,7 +187,9 @@ export default function Admin() {
           <h2>Agency Admin Login</h2>
           <p className="dim">Enter your agency code and your personal admin code.</p>
           <div className="field"><label>Agency code</label><input value={codes.agencyCode} onChange={(e) => setCodes({ ...codes, agencyCode: e.target.value.toUpperCase() })} placeholder="e.g. FALCON7X2" /></div>
-          <div className="field"><label>Admin code</label><input type="password" value={codes.adminCode} onChange={(e) => setCodes({ ...codes, adminCode: e.target.value })} placeholder="Admin code" /></div>
+          <div className="field"><label>Admin code</label>
+            <PasswordField value={codes.adminCode} onChange={(e) => setCodes({ ...codes, adminCode: e.target.value })} placeholder="Admin code" />
+          </div>
           <label style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '6px 0 12px' }}>
             <input type="checkbox" checked={codes.remember} onChange={(e) => setCodes({ ...codes, remember: e.target.checked })} style={{ width: 'auto' }} />
             <span className="dim">Remember me on this device for 30 days</span>
@@ -151,6 +197,17 @@ export default function Admin() {
           {error && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{error}</p>}
           <button className="btn" type="submit">Unlock</button>
           <p className="dim" style={{ marginTop: 14 }}>No agency yet? <a href="/signup" style={{ color: 'var(--cyan)' }}>Sign up here</a>.</p>
+          <button type="button" className="btn ghost" style={{ marginTop: 10, width: '100%' }} onClick={() => setForgotOpen((v) => !v)}>
+            {forgotOpen ? 'Hide' : 'Forgot your admin code?'}
+          </button>
+          {forgotOpen && (
+            <div style={{ marginTop: 10 }}>
+              <div className="field"><label>Agency code</label><input value={forgotForm.agencyCode} onChange={(e) => setForgotForm({ ...forgotForm, agencyCode: e.target.value.toUpperCase() })} /></div>
+              <div className="field"><label>Contact email on file</label><input type="email" value={forgotForm.contactEmail} onChange={(e) => setForgotForm({ ...forgotForm, contactEmail: e.target.value })} /></div>
+              {forgotMsg && <p className="dim" style={{ fontSize: 12 }}>{forgotMsg}</p>}
+              <button type="button" className="btn" style={{ width: '100%' }} onClick={submitForgot}>Send Reset Link</button>
+            </div>
+          )}
         </form>
       </div>
     );
@@ -167,7 +224,7 @@ export default function Admin() {
 
   return (
     <div className="wrap">
-      <header style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
         <div>
           <h1>Admin</h1>
           <div className="dim">{agency.name} · {creators.length}/{agency.max_creators} creators · plan: {agency.plan_tier}</div>
@@ -178,7 +235,7 @@ export default function Admin() {
       {inactive && (
         <div className="card" style={{ borderColor: 'var(--pink)' }}>
           <b style={{ color: 'var(--pink)' }}>This agency's subscription is {agency.status === 'canceled' ? 'canceled' : 'past due'}.</b>
-          <p className="dim" style={{ margin: '6px 0 0' }}>You can still view your existing roster and battles, but adding new people, booking new battles, responding to invites, and posting are all paused until this is resolved. Contact the platform owner to reactivate.</p>
+          <p className="dim" style={{ margin: '6px 0 0' }}>You can still view your existing roster and battles, but adding new people, booking new battles, responding to invites, and posting are all paused until this is resolved.</p>
         </div>
       )}
 
@@ -206,6 +263,20 @@ export default function Admin() {
         )}
       </div>
 
+      <form className="card" onSubmit={changeAdminCode} onKeyDown={focusNext}>
+        <h2>Change Admin Code</h2>
+        <div className="row">
+          <div className="field" style={{ flex: 1 }}><label>Current admin code</label>
+            <PasswordField value={codeForm.current} onChange={(e) => setCodeForm({ ...codeForm, current: e.target.value })} />
+          </div>
+          <div className="field" style={{ flex: 1 }}><label>New admin code (8+ characters)</label>
+            <PasswordField value={codeForm.next} onChange={(e) => setCodeForm({ ...codeForm, next: e.target.value })} minLength={8} />
+          </div>
+        </div>
+        {codeMsg && <p style={{ color: codeMsg.includes('updated') ? 'var(--green)' : 'var(--pink)', fontSize: 12 }}>{codeMsg}</p>}
+        <button className="btn" type="submit">Update Admin Code</button>
+      </form>
+
       {posts.some((p) => p.reported) && (
         <div className="card" style={{ borderColor: 'var(--pink)' }}>
           <h2 style={{ color: 'var(--pink)' }}>Reported Posts</h2>
@@ -223,8 +294,8 @@ export default function Admin() {
         <p className="dim">Add someone directly — give them the starting PIN so they can log in and change it themselves later.</p>
         <div className="row">
           <div className="field" style={{ flex: 1 }}><label>Nickname</label><input value={addForm.name} onChange={(e) => setAddForm({ ...addForm, name: e.target.value })} /></div>
-          <div className="field" style={{ flex: 1 }}><label>TikTok Handle</label><input value={addForm.handle} onChange={(e) => setAddForm({ ...addForm, handle: e.target.value })} /></div>
-          <div className="field" style={{ flex: 1 }}><label>Diamonds (30d)</label><input type="number" value={addForm.diamonds} onChange={(e) => setAddForm({ ...addForm, diamonds: Number(e.target.value) })} /></div>
+          <div className="field" style={{ flex: 1 }}><label>TikTok Handle</label><input value={addForm.handle} onChange={(e) => setAddForm({ ...addForm, handle: e.target.value })} placeholder="no @ needed" /></div>
+          <div className="field" style={{ flex: 1 }}><label>Diamonds (30d)</label><input type="number" value={addForm.diamonds} onChange={(e) => setAddForm({ ...addForm, diamonds: Number(e.target.value) })} placeholder="e.g. 10000" /></div>
         </div>
         <div className="row">
           <div className="field" style={{ flex: 1 }}><label>League</label>
@@ -238,7 +309,9 @@ export default function Admin() {
               {ZONES.map((z) => <option key={z.code} value={z.code}>{z.label}</option>)}
             </select>
           </div>
-          <div className="field" style={{ flex: 1 }}><label>Starting PIN (6+ characters)</label><input type="password" minLength={6} value={addForm.pin} onChange={(e) => setAddForm({ ...addForm, pin: e.target.value })} /></div>
+          <div className="field" style={{ flex: 1 }}><label>Starting PIN (6+ characters)</label>
+            <PasswordField value={addForm.pin} onChange={(e) => setAddForm({ ...addForm, pin: e.target.value })} minLength={6} />
+          </div>
         </div>
         {addError && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{addError}</p>}
         <button className="btn" type="submit">Add to Roster</button>
@@ -260,7 +333,8 @@ export default function Admin() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {filtered.map((c) => (
               <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-raised)', border: '1px solid var(--line)', borderRadius: 8, padding: '10px 14px', flexWrap: 'wrap', gap: 10 }}>
-                <div style={{ minWidth: 160 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 160 }}>
+                  <Avatar url={c.avatar_url} name={c.name} size={32} />
                   <b>{c.name}</b> <span className="dim">{c.handle}</span>
                 </div>
                 <div className="dim" style={{ minWidth: 100 }}>{(c.diamonds || 0).toLocaleString()} 💎</div>
@@ -270,6 +344,7 @@ export default function Admin() {
                 <div className="row">
                   <button className="btn ghost" style={{ padding: '5px 10px', fontSize: 12 }} onClick={() => setBookForm({ ...bookForm, a: c.id })}>Set A</button>
                   <button className="btn ghost" style={{ padding: '5px 10px', fontSize: 12 }} onClick={() => setBookForm({ ...bookForm, b: c.id })}>Set B</button>
+                  <button className="btn ghost" style={{ padding: '5px 10px', fontSize: 12 }} onClick={() => resetCreatorPin(c.id, c.name)}>Reset PIN</button>
                   <button className="btn ghost" style={{ padding: '5px 10px', fontSize: 12, borderColor: 'var(--pink)', color: 'var(--pink)' }} onClick={() => removeCreator(c.id, c.name)}>Remove</button>
                 </div>
               </div>
@@ -291,7 +366,9 @@ export default function Admin() {
               <option value="">Select…</option>{creators.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
-          <div className="field" style={{ flex: 1 }}><label>Date &amp; Time</label><input type="datetime-local" value={bookForm.datetime} onChange={(e) => setBookForm({ ...bookForm, datetime: e.target.value })} /></div>
+          <div className="field" style={{ flex: 2 }}><label>Date &amp; Time</label>
+            <DateTimePicker value={bookForm.datetime} onChange={(v) => setBookForm({ ...bookForm, datetime: v })} />
+          </div>
           <div className="field" style={{ flex: 1 }}><label>Timezone</label>
             <select value={bookForm.tz} onChange={(e) => setBookForm({ ...bookForm, tz: e.target.value })}>
               {ZONES.map((z) => <option key={z.code} value={z.code}>{z.label}</option>)}
