@@ -25,7 +25,7 @@ export default function NavMenu() {
   }, []);
 
   return (
-    <div ref={ref} style={{ position: 'fixed', top: 14, right: 14, zIndex: 9998 }}>
+    <div ref={ref} className="nav-menu-wrap" style={{ position: 'fixed', top: 'calc(env(safe-area-inset-top, 0px) + 14px)', right: 'calc(env(safe-area-inset-right, 0px) + 14px)', zIndex: 9998 }}>
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label="Menu"

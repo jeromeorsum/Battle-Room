@@ -8,6 +8,27 @@ export default function SuperAdmin() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [agencies, setAgencies] = useState([]);
+  const [openRoster, setOpenRoster] = useState(null); // agencyId currently expanded
+  const [rosterCreators, setRosterCreators] = useState([]);
+  const [rosterLoading, setRosterLoading] = useState(false);
+
+  async function toggleRoster(agencyId) {
+    if (openRoster === agencyId) { setOpenRoster(null); return; }
+    setOpenRoster(agencyId);
+    setRosterLoading(true);
+    const res = await fetch(`/api/super-admin/agency-creators?agencyId=${agencyId}`);
+    if (res.ok) setRosterCreators(await res.json());
+    setRosterLoading(false);
+  }
+
+  async function resetCreatorPin(creatorId, name) {
+    const newPin = prompt(`Set a new temporary PIN for ${name} (6+ characters):`);
+    if (!newPin) return;
+    const res = await fetch('/api/super-admin/reset-creator-pin', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ creatorId, newPin })
+    });
+    if (res.ok) alert(`New PIN set for ${name}.`); else alert('Could not reset PIN.');
+  }
 
   useEffect(() => { checkSession(); }, []);
 
@@ -40,6 +61,16 @@ export default function SuperAdmin() {
     });
     if (res.ok) checkSession();
     else alert('Update failed.');
+  }
+
+  async function resetAdminCode(id, name) {
+    const newCode = prompt(`Set a new admin code for ${name} (8+ characters). Tell them this code so they can log in and change it themselves.`);
+    if (!newCode) return;
+    if (newCode.length < 8) { alert('Admin code must be at least 8 characters.'); return; }
+    const res = await fetch('/api/super-admin/reset-admin-code', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agencyId: id, newCode })
+    });
+    if (res.ok) alert(`New admin code set for ${name}.`); else alert('Could not reset admin code.');
   }
 
   if (loading) return <div className="wrap"><p className="dim">Loading…</p></div>;
@@ -109,8 +140,24 @@ export default function SuperAdmin() {
                 <div className="dim" style={{ fontSize: 10, maxWidth: 200, textAlign: 'right' }}>
                   Status updates automatically from Stripe once billing is connected — this dropdown is a manual override for edge cases.
                 </div>
+                <button className="btn ghost" style={{ fontSize: 12 }} onClick={() => resetAdminCode(a.id, a.name)}>Reset Admin Code</button>
+                <button className="btn ghost" style={{ fontSize: 12 }} onClick={() => toggleRoster(a.id)}>{openRoster === a.id ? 'Hide Roster' : 'View Roster'}</button>
               </div>
             </div>
+            {openRoster === a.id && (
+              <div style={{ marginTop: 12, borderTop: '1px solid var(--line)', paddingTop: 12 }}>
+                {rosterLoading ? <p className="dim">Loading…</p> : rosterCreators.length === 0 ? <p className="dim">No creators yet.</p> : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {rosterCreators.map((c) => (
+                      <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-raised)', border: '1px solid var(--line)', borderRadius: 8, padding: '8px 12px' }}>
+                        <span>{c.name} <span className="dim">{c.handle}</span></span>
+                        <button className="btn ghost" style={{ fontSize: 11, padding: '4px 10px' }} onClick={() => resetCreatorPin(c.id, c.name)}>Reset PIN</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         );
       })}

@@ -2,23 +2,24 @@ import { supabaseAdmin } from '../../lib/supabaseAdmin';
 import { readSession, COOKIES } from '../../lib/session';
 import { canWrite } from '../../lib/agencyStatus';
 import { containsBlockedContent } from '../../lib/moderation';
+import { resolveAgencyId } from '../../lib/agencyScope';
 
 export default async function handler(req, res) {
-  const agencyScope = readSession(req, COOKIES.AGENCY_SCOPE) || readSession(req, COOKIES.ADMIN);
-  if (!agencyScope) return res.status(401).json({ error: 'Enter your agency code first.' });
+  const creatorSession = readSession(req, COOKIES.CREATOR);
+  const agencyId = resolveAgencyId(req);
+  if (!agencyId) return res.status(401).json({ error: 'Enter your agency code first.' });
 
   if (req.method === 'GET') {
     const { data, error } = await supabaseAdmin
       .from('posts')
-      .select('id, creator_id, message, reported, created_at, creators(name, handle)')
-      .eq('agency_id', agencyScope.agencyId)
+      .select('id, creator_id, message, reported, created_at, creators(name, handle, avatar_url)')
+      .eq('agency_id', agencyId)
       .order('created_at', { ascending: false });
     if (error) return res.status(500).json({ error: error.message });
     return res.status(200).json(data);
   }
 
   if (req.method === 'POST') {
-    const creatorSession = readSession(req, COOKIES.CREATOR);
     if (!creatorSession) return res.status(401).json({ error: 'Log in first.' });
 
     const { data: agency } = await supabaseAdmin.from('agencies').select('status').eq('id', creatorSession.agencyId).single();

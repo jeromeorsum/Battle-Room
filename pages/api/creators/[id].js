@@ -20,13 +20,14 @@ export default async function handler(req, res) {
   if (!isSelf && !isAgencyAdmin) return res.status(403).json({ error: 'Not authorized to modify this profile.' });
 
   if (req.method === 'PUT') {
-    const { name, handle, diamonds, league, tz, tags, pin, currentPin, avatar_url } = req.body;
+    const { name, handle, diamonds, league, tz, tags, pin, currentPin, avatar_url, gender } = req.body;
     const cleanHandle = handle ? handle.trim().replace(/^@+/, '') : null;
     const update = {
       name, handle: cleanHandle,
       diamonds: diamonds || 0, league: league || null, tz: tz || 'ET', tags: tags || []
     };
     if (avatar_url !== undefined) update.avatar_url = avatar_url || null;
+    if (gender !== undefined) update.gender = gender || null;
     if (pin) {
       if (String(pin).length < 6) return res.status(400).json({ error: 'PIN must be at least 6 characters.' });
       // If you're changing your own PIN, you must prove you know the
@@ -44,7 +45,7 @@ export default async function handler(req, res) {
       .from('creators')
       .update(update)
       .eq('id', id)
-      .select('id, name, handle, diamonds, league, tz, tags, avatar_url')
+      .select('id, name, handle, diamonds, league, tz, tags, avatar_url, gender')
       .single();
     if (error) return res.status(500).json({ error: error.message });
     return res.status(200).json(data);

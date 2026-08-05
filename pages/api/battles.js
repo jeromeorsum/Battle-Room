@@ -4,18 +4,19 @@ import { notifyCreator } from '../../lib/push';
 import { readSession, COOKIES } from '../../lib/session';
 import { canWrite } from '../../lib/agencyStatus';
 import { getAgencyStatus } from '../../lib/agencyStatusDb';
+import { resolveAgencyId } from '../../lib/agencyScope';
 
 export default async function handler(req, res) {
   const creatorSession = readSession(req, COOKIES.CREATOR);
   const adminSession = readSession(req, COOKIES.ADMIN);
 
   if (req.method === 'GET') {
-    const scope = readSession(req, COOKIES.AGENCY_SCOPE) || adminSession;
-    if (!scope || !scope.agencyId) return res.status(401).json({ error: 'Enter your agency code first.' });
+    const agencyId = resolveAgencyId(req);
+    if (!agencyId) return res.status(401).json({ error: 'Enter your agency code first.' });
     const { data, error } = await supabaseAdmin
       .from('battles')
       .select('*')
-      .eq('agency_id', scope.agencyId)
+      .eq('agency_id', agencyId)
       .order('datetime_utc', { ascending: true });
     if (error) return res.status(500).json({ error: error.message });
     return res.status(200).json(data);

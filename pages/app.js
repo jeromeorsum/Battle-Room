@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ZONES, BATTLE_TYPES, LEAGUE_OPTIONS, zoneByCode } from '../lib/constants';
-import { enablePushNotifications } from '../lib/pushClient';
+import { enablePushNotifications, disablePushNotifications } from '../lib/pushClient';
 import { downloadICS, googleCalendarUrl } from '../lib/calendarClient';
 import Avatar from '../components/Avatar';
 import PasswordField from '../components/PasswordField';
@@ -88,13 +88,26 @@ export default function Home() {
     setStep('profile');
   }
 
-  async function createProfile(form) {
+  async function createProfile(form, avatarFile) {
     const res = await fetch('/api/creators', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form)
     });
     const created = await res.json();
     if (!res.ok) { alert(created.error || 'Could not create profile.'); return; }
     setMyId(created.id);
+    if (avatarFile) {
+      try {
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(avatarFile);
+        });
+        await fetch('/api/upload-avatar', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataUrl })
+        });
+      } catch (e) { console.error('avatar upload failed', e); }
+    }
     setStep('opponents');
     refresh();
   }
@@ -261,9 +274,10 @@ function AvatarUploader({ me, onUploaded }) {
 
 function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogin, onSaved }) {
   const [form, setForm] = useState(() => me
-    ? { name: me.name, handle: me.handle || '', diamonds: me.diamonds || 0, league: me.league || '', tz: me.tz || 'ET', tags: me.tags || [], pin: '', currentPin: '' }
-    : { name: '', handle: '', diamonds: 0, league: '', tz: 'ET', tags: [], pin: '' }
+    ? { name: me.name, handle: me.handle || '', diamonds: me.diamonds || 0, league: me.league || '', tz: me.tz || 'ET', tags: me.tags || [], gender: me.gender || '', pin: '', currentPin: '' }
+    : { name: '', handle: '', diamonds: 0, league: '', tz: 'ET', tags: [], gender: '', pin: '' }
   );
+  const [pendingAvatarFile, setPendingAvatarFile] = useState(null);
   const [pushStatus, setPushStatus] = useState('');
   const [saveError, setSaveError] = useState('');
   const [avatarUrl, setAvatarUrl] = useState(me?.avatar_url || null);
@@ -287,6 +301,11 @@ function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogi
   async function turnOnPush() {
     try { await enablePushNotifications(); setPushStatus('Notifications enabled ✅'); }
     catch (e) { setPushStatus(e.message); }
+  }
+
+  async function turnOffPush() {
+    await disablePushNotifications();
+    setPushStatus('Notifications turned off.');
   }
 
   if (me) {
@@ -316,6 +335,13 @@ function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogi
             </select>
           </div>
         </div>
+        <div className="field" style={{ maxWidth: 220 }}><label>Gender (optional)</label>
+          <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
+            <option value="">Prefer not to say</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
+        </div>
         <div className="field">
           <label>Battle types you do</label>
           <div className="row">
@@ -336,7 +362,10 @@ function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogi
         </div>
         {saveError && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{saveError}</p>}
         <div className="row" style={{ justifyContent: 'space-between', marginTop: 10 }}>
-          <button className="btn ghost" type="button" onClick={turnOnPush}>🔔 Enable push notifications</button>
+          <div className="row">
+            <button className="btn ghost" type="button" onClick={turnOnPush}>🔔 Enable push notifications</button>
+            <button className="btn ghost" type="button" onClick={turnOffPush}>🔕 Turn off notifications</button>
+          </div>
           <button className="btn" type="submit">Save changes</button>
         </div>
         {pushStatus && <p className="dim" style={{ marginTop: 8 }}>{pushStatus}</p>}
@@ -348,6 +377,7 @@ function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogi
     <div className="card">
       <h2>Who are you?</h2>
       <p className="dim">Pick your nickname and enter your PIN, or create a new profile below. Once you log in, this browser will remember you for 30 days.</p>
+      <div id="login-list">
       {creators.map((c) => (
         <div key={c.id} style={{ marginBottom: 8 }}>
           {pinAttempt.id === c.id ? (
@@ -366,11 +396,28 @@ function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogi
           )}
         </div>
       ))}
+      </div>
       {pinAttempt.error && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{pinAttempt.error}</p>}
 
       <hr style={{ border: 'none', borderTop: '1px solid var(--line)', margin: '16px 0' }} />
       <h2 style={{ fontSize: 16 }}>Create a new profile</h2>
-      <form onKeyDown={focusNext} onSubmit={(e) => { e.preventDefault(); if (!form.name || !form.pin) { alert('Nickname and PIN are required.'); return; } onCreate(form); }}>
+      {creators.length > 0 && (
+        <p className="dim" style={{ marginTop: -6, marginBottom: 12 }}>
+          Already have an account? <a href="#login-list" onClick={(e) => { e.preventDefault(); document.getElementById('login-list').scrollIntoView({ behavior: 'smooth' }); }} style={{ color: 'var(--cyan)' }}>Sign in here</a>
+        </p>
+      )}
+      <form onKeyDown={focusNext} onSubmit={(e) => { e.preventDefault(); if (!form.name || !form.pin) { alert('Nickname and PIN are required.'); return; } onCreate(form, pendingAvatarFile); }}>
+        <div className="field">
+          <label>Profile picture (optional)</label>
+          <div className="row" style={{ alignItems: 'center' }}>
+            <Avatar url={pendingAvatarFile ? URL.createObjectURL(pendingAvatarFile) : null} name={form.name} size={48} />
+            <label className="btn ghost" style={{ cursor: 'pointer' }}>
+              {pendingAvatarFile ? 'Change photo' : 'Choose photo'}
+              <input type="file" accept="image/*" onChange={(e) => setPendingAvatarFile(e.target.files[0] || null)} style={{ display: 'none' }} />
+            </label>
+          </div>
+          <div className="dim">If you skip this, your nickname's first letter is used instead.</div>
+        </div>
         <div className="row">
           <div className="field" style={{ flex: 1 }}><label>Nickname</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
           <div className="field" style={{ flex: 1 }}><label>TikTok Handle</label><input value={form.handle} onChange={(e) => setForm({ ...form, handle: e.target.value })} placeholder="e.g. miachen.live (no @ needed)" />
@@ -393,6 +440,13 @@ function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogi
             </select>
           </div>
         </div>
+        <div className="field" style={{ maxWidth: 220 }}><label>Gender (optional)</label>
+          <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
+            <option value="">Prefer not to say</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
+        </div>
         <div className="field">
           <label>Battle types you do</label>
           <div className="row">
@@ -408,7 +462,6 @@ function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogi
         </div>
         <button className="btn" type="submit">Create Profile &amp; Continue</button>
       </form>
-      <p className="dim" style={{ marginTop: 10 }}>You can add a profile picture from the Profile tab after your account is created.</p>
     </div>
   );
 }
@@ -455,12 +508,15 @@ function BoardStep({ me }) {
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState('');
+  const [loadError, setLoadError] = useState('');
 
   async function load() {
+    setLoadError('');
     try {
       const res = await fetch('/api/posts');
-      if (res.ok) setPosts(await res.json());
-    } catch (e) { console.error('load posts failed', e); }
+      if (res.ok) { setPosts(await res.json()); }
+      else { const d = await res.json(); setLoadError(d.error || 'Could not load posts.'); }
+    } catch (e) { setLoadError('Network error loading posts.'); }
     setLoading(false);
   }
   useEffect(() => { load(); }, []);
@@ -510,6 +566,7 @@ function BoardStep({ me }) {
         {error && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{error}</p>}
         <button className="btn" type="submit" disabled={posting}>{posting ? 'Posting…' : 'Post'}</button>
       </form>
+      {loadError && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{loadError}</p>}
       {loading ? <p className="dim">Loading…</p> : posts.length === 0 ? <p className="dim">No posts yet — be the first.</p> : posts.map((p) => (
         <div key={p.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
           <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
@@ -527,6 +584,47 @@ function BoardStep({ me }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function NeedsResponseCard({ b, me, nameOf, handleOf, onRespond, onRebuttal }) {
+  const [rebutting, setRebutting] = useState(false);
+  const [datetime, setDatetime] = useState('');
+  const [tz, setTz] = useState(me.tz);
+  const opponentId = b.creator_a === me.id ? b.creator_b : b.creator_a;
+
+  return (
+    <div className="vs">
+      <div className="side">{nameOf(b.creator_a)}<div className="dim">{handleOf(b.creator_a)}</div></div>
+      <div className="mid">VS</div>
+      <div className="side b">{nameOf(b.creator_b)}<div className="dim">{handleOf(b.creator_b)}</div></div>
+      <div style={{ padding: 12, width: '100%' }}>
+        {!rebutting ? (
+          <div className="row">
+            <button className="btn ghost" onClick={() => onRespond(b.id, 'decline')}>Decline</button>
+            <button className="btn ghost" onClick={() => setRebutting(true)}>Propose different time</button>
+            <button className="btn" onClick={() => onRespond(b.id, 'accept')}>Accept</button>
+          </div>
+        ) : (
+          <div>
+            <div className="row">
+              <div className="field" style={{ flex: 2 }}><label>New date &amp; time</label>
+                <DateTimePicker value={datetime} onChange={setDatetime} />
+              </div>
+              <div className="field" style={{ flex: 1 }}><label>Timezone</label>
+                <select value={tz} onChange={(e) => setTz(e.target.value)}>
+                  {ZONES.map((z) => <option key={z.code} value={z.code}>{z.label}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="row" style={{ marginTop: 8 }}>
+              <button className="btn ghost" onClick={() => setRebutting(false)}>Cancel</button>
+              <button className="btn" onClick={() => onRebuttal(b, opponentId, datetime, tz)}>Send Counter-Offer</button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -561,6 +659,19 @@ function BattlesStep({ me, creators, battles, onChange }) {
     onChange();
   }
 
+  async function sendRebuttal(originalBattle, opponentId, datetime, tz) {
+    if (!datetime) { alert('Pick a time first.'); return; }
+    // Decline the original, then send a fresh invite back the other way
+    // with the new proposed time — a "counter-offer" instead of a flat no.
+    await fetch(`/api/battles/${originalBattle.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'decline' }) });
+    const res = await fetch('/api/battles', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ creatorA: me.id, creatorB: opponentId, localDateTime: datetime, zoneCode: tz, notes: 'Rebuttal — proposed a different time' })
+    });
+    if (!res.ok) { const d = await res.json(); alert(d.error || 'Could not send rebuttal.'); }
+    onChange();
+  }
+
   return (
     <div>
       <form className="card" onSubmit={sendInvite} onKeyDown={focusNext}>
@@ -587,15 +698,7 @@ function BattlesStep({ me, creators, battles, onChange }) {
 
       {needsResponse.length > 0 && <h3>Needs Your Response</h3>}
       {needsResponse.map((b) => (
-        <div key={b.id} className="vs">
-          <div className="side">{nameOf(b.creator_a)}<div className="dim">{handleOf(b.creator_a)}</div></div>
-          <div className="mid">VS</div>
-          <div className="side b">{nameOf(b.creator_b)}<div className="dim">{handleOf(b.creator_b)}</div></div>
-          <div style={{ padding: 12 }}>
-            <button className="btn ghost" onClick={() => respond(b.id, 'decline')}>Decline</button>{' '}
-            <button className="btn" onClick={() => respond(b.id, 'accept')}>Accept</button>
-          </div>
-        </div>
+        <NeedsResponseCard key={b.id} b={b} me={me} nameOf={nameOf} handleOf={handleOf} onRespond={respond} onRebuttal={sendRebuttal} />
       ))}
 
       {waiting.length > 0 && <h3>Waiting on a Response</h3>}

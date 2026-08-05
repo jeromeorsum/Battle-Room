@@ -2,15 +2,12 @@ import bcrypt from 'bcryptjs';
 import { supabaseAdmin } from '../../lib/supabaseAdmin';
 import { readSession, setSessionCookie, COOKIES } from '../../lib/session';
 import { canWrite } from '../../lib/agencyStatus';
+import { resolveAgencyId } from '../../lib/agencyScope';
 
-// Every request here must prove it knows the agency's code (via the
-// agency-scope cookie set by /api/agencies/resolve or /api/admin-login).
-// The agencyId is taken from that cookie, never trusted from the client,
-// so nobody can read or write into an agency they don't have the code for.
 function requireAgencyScope(req, res) {
-  const scope = readSession(req, COOKIES.AGENCY_SCOPE) || readSession(req, COOKIES.ADMIN);
-  if (!scope || !scope.agencyId) { res.status(401).json({ error: 'Enter your agency code first.' }); return null; }
-  return scope.agencyId;
+  const agencyId = resolveAgencyId(req);
+  if (!agencyId) { res.status(401).json({ error: 'Enter your agency code first.' }); return null; }
+  return agencyId;
 }
 
 export default async function handler(req, res) {
@@ -19,7 +16,7 @@ export default async function handler(req, res) {
     if (!agencyId) return;
     const { data, error } = await supabaseAdmin
       .from('creators')
-      .select('id, name, handle, diamonds, league, tz, tags, avatar_url, created_at')
+      .select('id, name, handle, diamonds, league, tz, tags, avatar_url, gender, created_at')
       .eq('agency_id', agencyId)
       .order('created_at', { ascending: true });
     if (error) return res.status(500).json({ error: error.message });
@@ -29,7 +26,7 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     const agencyId = requireAgencyScope(req, res);
     if (!agencyId) return;
-    const { name, handle, diamonds, league, tz, tags, pin } = req.body;
+    const { name, handle, diamonds, league, tz, tags, pin, gender } = req.body;
     if (!name || !pin) return res.status(400).json({ error: 'Name and PIN are required.' });
     if (String(pin).length < 6) return res.status(400).json({ error: 'PIN must be at least 6 characters.' });
 
@@ -50,9 +47,9 @@ export default async function handler(req, res) {
       .insert({
         agency_id: agencyId, name, handle: cleanHandle,
         diamonds: diamonds || 0, league: league || null, tz: tz || 'ET',
-        tags: tags || [], pin_hash
+        tags: tags || [], gender: gender || null, pin_hash
       })
-      .select('id, name, handle, diamonds, league, tz, tags, avatar_url')
+      .select('id, name, handle, diamonds, league, tz, tags, avatar_url, gender')
       .single();
     if (error) return res.status(500).json({ error: error.message });
 

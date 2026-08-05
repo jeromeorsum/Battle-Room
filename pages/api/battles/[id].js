@@ -2,6 +2,7 @@ import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 import { notifyCreator } from '../../../lib/push';
 import { readSession, COOKIES } from '../../../lib/session';
 import { canWrite } from '../../../lib/agencyStatus';
+import { zoneByCode, zonedTimeToUtc } from '../../../lib/constants';
 
 export default async function handler(req, res) {
   const { id } = req.query;
@@ -15,8 +16,8 @@ export default async function handler(req, res) {
   const isAgencyAdmin = adminSession && adminSession.agencyId === battle.agency_id;
 
   if (req.method === 'PATCH') {
-    // Accept/decline can only be done by the actual participant, proven via
-    // their session — not by whoever the client claims "actorId" to be.
+    // Accept/decline/counter can only be done by the actual participant,
+    // proven via their session — not by whoever the client claims "actorId" to be.
     if (!isParticipant) return res.status(403).json({ error: 'Only a participant can respond to this battle.' });
 
     const { data: agency } = await supabaseAdmin.from('agencies').select('status').eq('id', battle.agency_id).single();
@@ -24,6 +25,44 @@ export default async function handler(req, res) {
 
     const actorId = creatorSession.creatorId;
     const { action } = req.body;
+
+    if (action === 'counter') {
+      // Declines the original invite and creates a fresh one at the time
+      // the countering party actually can do — same two people, new time,
+      // with the counterer auto-accepted (they're the one proposing this
+      // time) and the original proposer needing to respond to it.
+      const { localDateTime, zoneCode, notes } = req.body;
+      if (!localDateTime) return res.status(400).json({ error: 'Pick a new time to propose.' });
+
+      await supabaseAdmin.from('battles').update({ declined: true }).eq('id', id);
+
+      const zone = zoneByCode(zoneCode);
+      const utcDate = zonedTimeToUtc(localDateTime, zone.iana);
+      const acceptedA = actorId === battle.creator_a;
+      const acceptedB = actorId === battle.creator_b;
+
+      const { data: newBattle, error } = await supabaseAdmin
+        .from('battles')
+        .insert({
+          agency_id: battle.agency_id, creator_a: battle.creator_a, creator_b: battle.creator_b,
+          datetime_utc: utcDate.toISOString(), zone_code: zone.code,
+          notes: notes || null, accepted_a: acceptedA, accepted_b: acceptedB,
+          declined: false, created_by: actorId
+        })
+        .select('*')
+        .single();
+      if (error) return res.status(500).json({ error: error.message });
+
+      const other = actorId === battle.creator_a ? battle.creator_b : battle.creator_a;
+      const { data: actor } = await supabaseAdmin.from('creators').select('name').eq('id', actorId).single();
+      await notifyCreator(other, {
+        title: 'New time proposed',
+        body: `${actor ? actor.name : 'Someone'} couldn't make the original time and proposed a new one. Open Battle Room to respond.`,
+        url: '/app'
+      });
+
+      return res.status(201).json(newBattle);
+    }
 
     const update = {};
     if (action === 'accept') {

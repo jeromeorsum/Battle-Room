@@ -30,7 +30,7 @@ export default function DateTimePicker({ value, onChange }) {
   }
 
   return (
-    <div className="row" style={{ gap: 6 }}>
+    <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
       <input type="date" value={date} onChange={(e) => update({ date: e.target.value })} style={{ flex: 2, minWidth: 130 }} />
       <select value={hour} onChange={(e) => update({ hour: Number(e.target.value) })} style={{ flex: 1, minWidth: 60 }}>
         {HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
