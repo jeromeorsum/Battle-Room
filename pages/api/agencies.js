@@ -9,6 +9,11 @@ export default async function handler(req, res) {
   const { name, adminCode, planTier, billingPeriod, contactEmail, contactPhone } = req.body;
   if (!name || !adminCode) return res.status(400).json({ error: 'Agency name and admin code are required.' });
   if (String(adminCode).length < 8) return res.status(400).json({ error: 'Admin code must be at least 8 characters — this protects your whole roster.' });
+  if (!contactEmail || !contactPhone) return res.status(400).json({ error: 'Contact email and phone are both required.' });
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailPattern.test(contactEmail)) return res.status(400).json({ error: 'That doesn\u2019t look like a valid email address.' });
+  const digitsOnly = contactPhone.replace(/\D/g, '');
+  if (digitsOnly.length < 10) return res.status(400).json({ error: 'That doesn\u2019t look like a valid phone number.' });
 
   const tier = tierById(planTier || 'starter');
   const admin_code_hash = await bcrypt.hash(String(adminCode), 12);

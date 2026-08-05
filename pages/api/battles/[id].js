@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 import { notifyCreator } from '../../../lib/push';
 import { readSession, COOKIES } from '../../../lib/session';
+import { canWrite } from '../../../lib/agencyStatus';
 
 export default async function handler(req, res) {
   const { id } = req.query;
@@ -17,6 +18,10 @@ export default async function handler(req, res) {
     // Accept/decline can only be done by the actual participant, proven via
     // their session — not by whoever the client claims "actorId" to be.
     if (!isParticipant) return res.status(403).json({ error: 'Only a participant can respond to this battle.' });
+
+    const { data: agency } = await supabaseAdmin.from('agencies').select('status').eq('id', battle.agency_id).single();
+    if (!canWrite(agency?.status)) return res.status(402).json({ error: 'This agency\u2019s subscription is inactive. Contact your agency admin.' });
+
     const actorId = creatorSession.creatorId;
     const { action } = req.body;
 

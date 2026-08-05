@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ZONES, BATTLE_TYPES, zoneByCode } from '../lib/constants';
+import { ZONES, BATTLE_TYPES, LEAGUE_OPTIONS, zoneByCode } from '../lib/constants';
 
 export default function Admin() {
   const [agency, setAgency] = useState(null);
@@ -10,15 +10,19 @@ export default function Admin() {
   const [battles, setBattles] = useState([]);
   const [filters, setFilters] = useState({ min: '', max: '', type: 'all' });
   const [bookForm, setBookForm] = useState({ a: '', b: '', datetime: '', tz: 'ET', notes: '' });
+  const [addForm, setAddForm] = useState({ name: '', handle: '', diamonds: 0, league: '', tz: 'ET', pin: '' });
+  const [addError, setAddError] = useState('');
 
   useEffect(() => {
     (async () => {
-      const res = await fetch('/api/admin-session');
-      if (res.ok) {
-        const data = await res.json();
-        setAgency(data);
-        await loadRoster();
-      }
+      try {
+        const res = await fetch('/api/admin-session');
+        if (res.ok) {
+          const data = await res.json();
+          setAgency(data);
+          await loadRoster();
+        }
+      } catch (e) { console.error('admin session check failed', e); }
       setLoading(false);
     })();
   }, []);
@@ -26,21 +30,25 @@ export default function Admin() {
   async function submitLogin(e) {
     if (e) e.preventDefault();
     setError('');
-    const res = await fetch('/api/admin-login', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(codes)
-    });
-    const data = await res.json();
-    if (!res.ok) { setError(data.error || 'Login failed.'); return; }
-    setAgency(data);
-    setCodes({ agencyCode: '', adminCode: '', remember: false });
-    loadRoster();
+    try {
+      const res = await fetch('/api/admin-login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(codes)
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Login failed.'); return; }
+      setAgency(data);
+      setCodes({ agencyCode: '', adminCode: '', remember: false });
+      loadRoster();
+    } catch (e) { setError('Network error — try again.'); }
   }
 
   async function loadRoster() {
-    const [cRes, bRes] = await Promise.all([fetch('/api/creators'), fetch('/api/battles')]);
-    if (cRes.ok) setCreators(await cRes.json());
-    if (bRes.ok) setBattles(await bRes.json());
+    try {
+      const [cRes, bRes] = await Promise.all([fetch('/api/creators'), fetch('/api/battles')]);
+      if (cRes.ok) setCreators(await cRes.json());
+      if (bRes.ok) setBattles(await bRes.json());
+    } catch (e) { console.error('loadRoster failed', e); }
   }
 
   async function logout() {
@@ -55,6 +63,20 @@ export default function Admin() {
     else alert('Could not remove creator.');
   }
 
+  async function addCreator(e) {
+    if (e) e.preventDefault();
+    setAddError('');
+    if (!addForm.name || !addForm.pin) { setAddError('Name and a starting PIN are required.'); return; }
+    if (addForm.pin.length < 6) { setAddError('PIN must be at least 6 characters.'); return; }
+    const res = await fetch('/api/creators', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(addForm)
+    });
+    const data = await res.json();
+    if (!res.ok) { setAddError(data.error || 'Could not add creator.'); return; }
+    setAddForm({ name: '', handle: '', diamonds: 0, league: '', tz: 'ET', pin: '' });
+    loadRoster();
+  }
+
   async function bookBattle(e) {
     if (e) e.preventDefault();
     if (!bookForm.a || !bookForm.b || bookForm.a === bookForm.b || !bookForm.datetime) { alert('Pick two different creators and a time.'); return; }
@@ -66,12 +88,24 @@ export default function Admin() {
     else { const d = await res.json(); alert(d.error || 'Could not book battle.'); }
   }
 
+  function focusNext(e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const form = e.target.form;
+    if (!form) return;
+    const fields = Array.from(form.elements).filter((el) => !el.disabled && el.type !== 'hidden');
+    const idx = fields.indexOf(e.target);
+    const next = fields[idx + 1];
+    if (next) next.focus();
+    else form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event('submit', { cancelable: true }));
+  }
+
   if (loading) return <div className="wrap"><p className="dim">Loading…</p></div>;
 
   if (!agency) {
     return (
       <div className="wrap">
-        <form className="card" style={{ maxWidth: 380, margin: '60px auto' }} onSubmit={submitLogin}>
+        <form className="card" style={{ maxWidth: 380, margin: '60px auto' }} onSubmit={submitLogin} onKeyDown={focusNext}>
           <h2>Agency Admin Login</h2>
           <p className="dim">Enter your agency code and your personal admin code.</p>
           <div className="field"><label>Agency code</label><input value={codes.agencyCode} onChange={(e) => setCodes({ ...codes, agencyCode: e.target.value.toUpperCase() })} placeholder="e.g. FALCON7X2" /></div>
@@ -110,13 +144,39 @@ export default function Admin() {
       {inactive && (
         <div className="card" style={{ borderColor: 'var(--pink)' }}>
           <b style={{ color: 'var(--pink)' }}>This agency's subscription is {agency.status === 'canceled' ? 'canceled' : 'past due'}.</b>
-          <p className="dim" style={{ margin: '6px 0 0' }}>You can still view your existing roster and battles, but creating new profiles or booking new battles is paused until this is resolved. Contact the platform owner to reactivate.</p>
+          <p className="dim" style={{ margin: '6px 0 0' }}>You can still view your existing roster and battles, but adding new people, booking new battles, responding to invites, and posting are all paused until this is resolved. Contact the platform owner to reactivate.</p>
         </div>
       )}
 
-      <div className="card">
-        <h2>Search Roster</h2>
+      <form className="card" onSubmit={addCreator} onKeyDown={focusNext}>
+        <h2>Add a Creator</h2>
+        <p className="dim">Add someone directly — give them the starting PIN so they can log in and change it themselves later.</p>
         <div className="row">
+          <div className="field" style={{ flex: 1 }}><label>Name</label><input value={addForm.name} onChange={(e) => setAddForm({ ...addForm, name: e.target.value })} /></div>
+          <div className="field" style={{ flex: 1 }}><label>TikTok Handle</label><input value={addForm.handle} onChange={(e) => setAddForm({ ...addForm, handle: e.target.value })} /></div>
+          <div className="field" style={{ flex: 1 }}><label>Diamonds (30d)</label><input type="number" value={addForm.diamonds} onChange={(e) => setAddForm({ ...addForm, diamonds: Number(e.target.value) })} /></div>
+        </div>
+        <div className="row">
+          <div className="field" style={{ flex: 1 }}><label>League</label>
+            <select value={addForm.league} onChange={(e) => setAddForm({ ...addForm, league: e.target.value })}>
+              <option value="">Select…</option>
+              {LEAGUE_OPTIONS.map((l) => <option key={l} value={l}>{l}</option>)}
+            </select>
+          </div>
+          <div className="field" style={{ flex: 1 }}><label>Timezone</label>
+            <select value={addForm.tz} onChange={(e) => setAddForm({ ...addForm, tz: e.target.value })}>
+              {ZONES.map((z) => <option key={z.code} value={z.code}>{z.label}</option>)}
+            </select>
+          </div>
+          <div className="field" style={{ flex: 1 }}><label>Starting PIN (6+ characters)</label><input type="password" minLength={6} value={addForm.pin} onChange={(e) => setAddForm({ ...addForm, pin: e.target.value })} /></div>
+        </div>
+        {addError && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{addError}</p>}
+        <button className="btn" type="submit">Add to Roster</button>
+      </form>
+
+      <div className="card">
+        <h2>Roster</h2>
+        <div className="row" style={{ marginBottom: 14 }}>
           <div className="field"><label>Min diamonds</label><input type="number" value={filters.min} onChange={(e) => setFilters({ ...filters, min: e.target.value })} /></div>
           <div className="field"><label>Max diamonds</label><input type="number" value={filters.max} onChange={(e) => setFilters({ ...filters, max: e.target.value })} /></div>
           <div className="field"><label>Battle type</label>
@@ -126,23 +186,29 @@ export default function Admin() {
             </select>
           </div>
         </div>
-        <div className="opp-grid">
-          {filtered.map((c) => (
-            <div key={c.id} className="card">
-              <div style={{ fontWeight: 700 }}>{c.name}</div>
-              <div className="dim">{(c.diamonds || 0).toLocaleString()} 💎 · {c.league || '—'}</div>
-              <div className="row">{(c.tags || []).map((t) => <span key={t} className="badge">{t}</span>)}</div>
-              <div className="row" style={{ marginTop: 6 }}>
-                <button className="btn ghost" onClick={() => setBookForm({ ...bookForm, a: c.id })}>Set as A</button>
-                <button className="btn ghost" onClick={() => setBookForm({ ...bookForm, b: c.id })}>Set as B</button>
+        {filtered.length === 0 ? <p className="dim">No creators match.</p> : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {filtered.map((c) => (
+              <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-raised)', border: '1px solid var(--line)', borderRadius: 8, padding: '10px 14px', flexWrap: 'wrap', gap: 10 }}>
+                <div style={{ minWidth: 160 }}>
+                  <b>{c.name}</b> <span className="dim">{c.handle}</span>
+                </div>
+                <div className="dim" style={{ minWidth: 100 }}>{(c.diamonds || 0).toLocaleString()} 💎</div>
+                <div className="dim" style={{ minWidth: 50 }}>{c.league || '—'}</div>
+                <div className="dim" style={{ minWidth: 40 }}>{c.tz}</div>
+                <div className="row" style={{ minWidth: 120 }}>{(c.tags || []).map((t) => <span key={t} className="badge">{t}</span>)}</div>
+                <div className="row">
+                  <button className="btn ghost" style={{ padding: '5px 10px', fontSize: 12 }} onClick={() => setBookForm({ ...bookForm, a: c.id })}>Set A</button>
+                  <button className="btn ghost" style={{ padding: '5px 10px', fontSize: 12 }} onClick={() => setBookForm({ ...bookForm, b: c.id })}>Set B</button>
+                  <button className="btn ghost" style={{ padding: '5px 10px', fontSize: 12, borderColor: 'var(--pink)', color: 'var(--pink)' }} onClick={() => removeCreator(c.id, c.name)}>Remove</button>
+                </div>
               </div>
-              <button className="btn ghost" style={{ marginTop: 4, borderColor: 'var(--pink)', color: 'var(--pink)' }} onClick={() => removeCreator(c.id, c.name)}>Remove from roster</button>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      <form className="card" onSubmit={bookBattle}>
+      <form className="card" onSubmit={bookBattle} onKeyDown={focusNext}>
         <h2>Book a Battle</h2>
         <div className="row">
           <div className="field" style={{ flex: 1 }}><label>Creator A</label>

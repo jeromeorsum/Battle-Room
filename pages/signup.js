@@ -12,13 +12,18 @@ export default function Signup() {
     if (e) e.preventDefault();
     setError('');
     if (!form.name || !form.adminCode) { setError('Agency name and an admin code are required.'); return; }
-    const res = await fetch('/api/agencies', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, billingPeriod })
-    });
-    const data = await res.json();
-    if (!res.ok) { setError(data.error || 'Signup failed.'); return; }
-    setResult(data);
+    if (!form.contactEmail || !form.contactPhone) { setError('Contact email and phone are both required.'); return; }
+    try {
+      const res = await fetch('/api/agencies', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, billingPeriod })
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Signup failed.'); return; }
+      setResult(data);
+    } catch (err) {
+      setError('Network error — please try again.');
+    }
   }
 
   function copyCode() {
@@ -65,8 +70,8 @@ export default function Signup() {
       <h1>Set up your agency</h1>
       <form className="card" style={{ maxWidth: 480 }} onSubmit={submit}>
         <div className="field"><label>Agency name</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-        <div className="field"><label>Contact email (for billing/account questions)</label><input type="email" value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} /></div>
-        <div className="field"><label>Contact phone (optional)</label><input value={form.contactPhone} onChange={(e) => setForm({ ...form, contactPhone: e.target.value })} /></div>
+        <div className="field"><label>Contact email (required — for billing/account questions)</label><input type="email" required value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} /></div>
+        <div className="field"><label>Contact phone (required)</label><input type="tel" required value={form.contactPhone} onChange={(e) => setForm({ ...form, contactPhone: e.target.value })} /></div>
         <div className="field"><label>Choose an admin code (you'll use this to manage battles)</label><input type="password" value={form.adminCode} onChange={(e) => setForm({ ...form, adminCode: e.target.value })} /></div>
 
         <div className="field">

@@ -32,6 +32,7 @@ export default async function handler(req, res) {
     const { name, handle, email, diamonds, league, tz, tags, pin } = req.body;
     if (!name || !pin) return res.status(400).json({ error: 'Name and PIN are required.' });
     if (String(pin).length < 6) return res.status(400).json({ error: 'PIN must be at least 6 characters.' });
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'That doesn\u2019t look like a valid email address.' });
 
     const { data: agency, error: agencyErr } = await supabaseAdmin
       .from('agencies').select('id, max_creators, status').eq('id', agencyId).single();

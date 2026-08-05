@@ -21,6 +21,7 @@ export default async function handler(req, res) {
 
   if (req.method === 'PUT') {
     const { name, handle, email, diamonds, league, tz, tags, pin } = req.body;
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'That doesn\u2019t look like a valid email address.' });
     const update = {
       name, handle: handle || null, email: email || null,
       diamonds: diamonds || 0, league: league || null, tz: tz || 'ET', tags: tags || []

@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '../../lib/supabaseAdmin';
 import { readSession, COOKIES } from '../../lib/session';
+import { canWrite } from '../../lib/agencyStatus';
 
 export default async function handler(req, res) {
   const agencyScope = readSession(req, COOKIES.AGENCY_SCOPE) || readSession(req, COOKIES.ADMIN);
@@ -18,6 +19,10 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     const creatorSession = readSession(req, COOKIES.CREATOR);
     if (!creatorSession) return res.status(401).json({ error: 'Log in first.' });
+
+    const { data: agency } = await supabaseAdmin.from('agencies').select('status').eq('id', creatorSession.agencyId).single();
+    if (!canWrite(agency?.status)) return res.status(402).json({ error: 'This agency\u2019s subscription is inactive. Contact your agency admin.' });
+
     const { message } = req.body;
     if (!message || !message.trim()) return res.status(400).json({ error: 'Message is required.' });
     if (message.length > 280) return res.status(400).json({ error: 'Keep it under 280 characters.' });
