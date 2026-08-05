@@ -94,7 +94,7 @@ export default function SuperAdmin() {
   const STATUS_COLOR = { trialing: 'var(--gold)', active: 'var(--green)', past_due: 'var(--pink)', canceled: 'var(--text-dim)' };
   const q = search.trim().toLowerCase();
   const filteredAgencies = q
-    ? agencies.filter((a) => a.name.toLowerCase().includes(q) || a.agency_code.toLowerCase().includes(q))
+    ? agencies.filter((a) => a.name.toLowerCase().startsWith(q) || a.agency_code.toLowerCase().startsWith(q))
     : agencies;
 
   return (

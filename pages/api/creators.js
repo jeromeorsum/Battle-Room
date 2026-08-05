@@ -24,11 +24,24 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const agencyId = requireAgencyScope(req, res);
-    if (!agencyId) return;
-    const { name, handle, diamonds, league, tz, tags, pin, gender } = req.body;
+    const { name, handle, diamonds, league, tz, tags, pin, gender, agencyCode } = req.body;
     if (!name || !pin) return res.status(400).json({ error: 'Name and PIN are required.' });
     if (String(pin).length < 6) return res.status(400).json({ error: 'PIN must be at least 6 characters.' });
+
+    // Creating an account is the one action where we deliberately don't
+    // trust any cookie — we re-verify the actual agency code against the
+    // database fresh, every time. This is what determines which agency's
+    // roster (and LFG board) a new creator ends up in, so it can't be
+    // allowed to drift from a stale cookie.
+    let agencyId;
+    if (agencyCode) {
+      const { data: agencyByCode } = await supabaseAdmin.from('agencies').select('id').eq('agency_code', agencyCode.trim().toUpperCase()).single();
+      if (!agencyByCode) return res.status(404).json({ error: 'That agency code is no longer valid — please re-enter it.' });
+      agencyId = agencyByCode.id;
+    } else {
+      agencyId = requireAgencyScope(req, res);
+      if (!agencyId) return;
+    }
 
     const { data: agency, error: agencyErr } = await supabaseAdmin
       .from('agencies').select('id, max_creators, status').eq('id', agencyId).single();

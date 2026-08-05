@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   const session = readSession(req, COOKIES.AGENCY_SCOPE);
   if (!session) return res.status(401).json({ error: 'No agency scope.' });
 
-  const { data: agency } = await supabaseAdmin.from('agencies').select('id, name, status').eq('id', session.agencyId).single();
+  const { data: agency } = await supabaseAdmin.from('agencies').select('id, name, agency_code, status').eq('id', session.agencyId).single();
   if (!agency) return res.status(401).json({ error: 'No agency scope.' });
 
   if (isLockedOut(agency.status)) {

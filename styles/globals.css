@@ -18,8 +18,9 @@ input, select { background: var(--bg-raised); border: 1px solid var(--line); bor
 .tabs button { flex: 1; min-width: 44%; background: none; border: none; color: var(--text-dim); padding: 12px 8px; border-radius: 7px; cursor: pointer; font-weight: 700; min-height: 44px; }
 .tabs button.active { background: var(--bg-card); color: var(--gold); }
 .tabs button:disabled { opacity: 0.4; cursor: not-allowed; }
-.vs { display: flex; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-bottom: 12px; background: var(--bg-card); }
-.side { flex: 1; padding: 12px 14px; min-width: 0; word-break: break-word; }
+.vs { display: flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-bottom: 12px; background: var(--bg-card); }
+.side { flex: 1 1 140px; min-width: 140px; padding: 12px 14px; word-break: break-word; }
+.vs-actions { flex: 1 1 100%; padding: 12px 14px; border-top: 1px solid var(--line); background: var(--bg-raised); }
 .side.b { text-align: right; }
 .vs .mid { display: flex; align-items: center; justify-content: center; padding: 0 12px; color: var(--gold); font-weight: 800; border-left: 1px solid var(--line); border-right: 1px solid var(--line); flex-shrink: 0; }
 .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid currentColor; }

@@ -402,7 +402,7 @@ export default function Admin() {
               <div className="side">{a ? a.name : '?'}</div>
               <div className="mid">VS</div>
               <div className="side b">{bb ? bb.name : '?'}</div>
-              <div style={{ padding: 12 }}>
+              <div className="vs-actions">
                 <span className="badge">{status}</span><br />
                 <span className="dim">{new Date(b.datetime_utc).toLocaleString()}</span>
               </div>

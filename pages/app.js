@@ -19,7 +19,6 @@ export default function Home() {
   const [myId, setMyId] = useState(null);
   const [step, setStep] = useState('profile');
   const [loading, setLoading] = useState(true);
-  const [pinAttempt, setPinAttempt] = useState({ id: null, value: '', error: '' });
 
   const me = creators.find((c) => c.id === myId);
 
@@ -44,7 +43,7 @@ export default function Home() {
         const sessRes = await fetch('/api/session');
         if (sessRes.ok) {
           const s = await sessRes.json();
-          setAgency({ id: s.agencyId, name: s.agencyName });
+          setAgency({ id: s.agencyId, name: s.agencyName, code: s.agencyCode });
           setMyId(s.creatorId);
           await refresh(s.agencyId);
           setLoading(false);
@@ -54,7 +53,7 @@ export default function Home() {
         const agencyRes = await fetch('/api/agency-session');
         if (agencyRes.ok) {
           const a = await agencyRes.json();
-          setAgency({ id: a.id, name: a.name });
+          setAgency({ id: a.id, name: a.name, code: a.agency_code });
           await refresh(a.id);
         } else if (agencyRes.status === 402) {
           const d = await agencyRes.json(); setAgencyError(d.error);
@@ -74,7 +73,7 @@ export default function Home() {
     });
     const data = await res.json();
     if (!res.ok) { setAgencyError(data.error || 'Agency not found.'); return; }
-    setAgency({ id: data.id, name: data.name });
+    setAgency({ id: data.id, name: data.name, code: agencyCodeInput.trim().toUpperCase() });
     refresh(data.id);
   }
 
@@ -91,10 +90,11 @@ export default function Home() {
 
   async function createProfile(form, avatarFile) {
     const res = await fetch('/api/creators', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form)
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, agencyCode: agency.code })
     });
     const created = await res.json();
     if (!res.ok) { alert(created.error || 'Could not create profile.'); return; }
+    if (agency) localStorage.setItem(`battleroom-last-handle-${agency.id}`, created.name);
     setMyId(created.id);
     if (avatarFile) {
       try {
@@ -113,14 +113,16 @@ export default function Home() {
     refresh();
   }
 
-  async function login(id, pin) {
+  async function login(identifier, pin) {
     const res = await fetch('/api/login', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ creatorId: id, pin })
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier, pin })
     });
     const data = await res.json();
-    if (!res.ok) { setPinAttempt({ id, value: '', error: data.error || 'Login failed.' }); return; }
+    if (!res.ok) { return data.error || 'Login failed.'; }
+    if (agency) localStorage.setItem(`battleroom-last-handle-${agency.id}`, identifier);
     setMyId(data.id);
     setStep('opponents');
+    return null;
   }
 
   if (loading) return <div className="wrap"><p className="dim">Loading…</p></div>;
@@ -166,7 +168,7 @@ export default function Home() {
 
       {step === 'profile' && (
         <ProfileStep
-          me={me} creators={creators} pinAttempt={pinAttempt} setPinAttempt={setPinAttempt}
+          me={me} creators={creators} agencyId={agency.id}
           onCreate={createProfile} onLogin={login} onSaved={refresh}
         />
       )}
@@ -273,12 +275,11 @@ function AvatarUploader({ me, onUploaded }) {
   );
 }
 
-function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogin, onSaved }) {
+function ProfileStep({ me, creators, agencyId, onCreate, onLogin, onSaved }) {
   const [form, setForm] = useState(() => me
     ? { name: me.name, handle: me.handle || '', diamonds: me.diamonds || 0, league: me.league || '', tz: me.tz || 'ET', tags: me.tags || [], gender: me.gender || '', pin: '', currentPin: '' }
     : { name: '', handle: '', diamonds: 0, league: '', tz: 'ET', tags: [], gender: '', pin: '' }
   );
-  const [pendingAvatarFile, setPendingAvatarFile] = useState(null);
   const [pushStatus, setPushStatus] = useState('');
   const [saveError, setSaveError] = useState('');
   const [avatarUrl, setAvatarUrl] = useState(me?.avatar_url || null);
@@ -374,44 +375,63 @@ function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogi
     );
   }
 
+  return <LoggedOutView creators={creators} agencyId={agencyId} onCreate={onCreate} onLogin={onLogin} />;
+}
+
+function LoggedOutView({ creators, agencyId, onCreate, onLogin }) {
+  const rememberedHandle = typeof window !== 'undefined' ? localStorage.getItem(`battleroom-last-handle-${agencyId}`) : null;
+  const [mode, setMode] = useState(rememberedHandle ? 'signin' : 'create');
+  const [signIn, setSignIn] = useState({ identifier: rememberedHandle || '', pin: '' });
+  const [signInError, setSignInError] = useState('');
+  const [createForm, setCreateForm] = useState({ name: '', handle: '', diamonds: 0, league: '', tz: 'ET', tags: [], gender: '', pin: '' });
+  const [pendingAvatarFile, setPendingAvatarFile] = useState(null);
+
+  function toggleTag(key) {
+    setCreateForm((f) => ({ ...f, tags: f.tags.includes(key) ? f.tags.filter((t) => t !== key) : [...f.tags, key] }));
+  }
+
+  async function submitSignIn(e) {
+    if (e) e.preventDefault();
+    setSignInError('');
+    if (!signIn.identifier || !signIn.pin) { setSignInError('Enter your handle/nickname and PIN.'); return; }
+    const err = await onLogin(signIn.identifier, signIn.pin);
+    if (err) setSignInError(err);
+  }
+
+  if (mode === 'signin') {
+    return (
+      <div className="card">
+        <h2>Sign In</h2>
+        <p className="dim">Enter your nickname or TikTok handle and your PIN. This browser will remember you for 30 days after you sign in.</p>
+        <form onKeyDown={focusNext} onSubmit={submitSignIn}>
+          <div className="field"><label>Nickname or Handle</label><input value={signIn.identifier} onChange={(e) => setSignIn({ ...signIn, identifier: e.target.value })} autoFocus /></div>
+          <div className="field"><label>PIN</label>
+            <PasswordField value={signIn.pin} onChange={(e) => setSignIn({ ...signIn, pin: e.target.value })} placeholder="PIN" />
+          </div>
+          {signInError && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{signInError}</p>}
+          <button className="btn" type="submit">Sign In</button>
+        </form>
+        <p className="dim" style={{ marginTop: 14 }}>
+          New here? <a href="#" onClick={(e) => { e.preventDefault(); setMode('create'); }} style={{ color: 'var(--cyan)' }}>Create a profile</a>
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="card">
-      <h2>Who are you?</h2>
-      <p className="dim">Pick your nickname and enter your PIN, or create a new profile below. Once you log in, this browser will remember you for 30 days.</p>
-      <div id="login-list">
-      {creators.map((c) => (
-        <div key={c.id} style={{ marginBottom: 8 }}>
-          {pinAttempt.id === c.id ? (
-            <form className="row" style={{ alignItems: 'center' }} onSubmit={(e) => { e.preventDefault(); onLogin(c.id, pinAttempt.value); }}>
-              <span>{c.name}</span>
-              <div style={{ maxWidth: 160 }}>
-                <PasswordField value={pinAttempt.value} onChange={(e) => setPinAttempt({ ...pinAttempt, value: e.target.value })} placeholder="PIN" autoFocus />
-              </div>
-              <button className="btn" type="submit" style={{ padding: '6px 12px' }}>Unlock</button>
-              <button className="btn ghost" type="button" style={{ padding: '6px 12px' }} onClick={() => setPinAttempt({ id: null, value: '', error: '' })}>Cancel</button>
-            </form>
-          ) : (
-            <button className="btn ghost" style={{ width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10 }} onClick={() => setPinAttempt({ id: c.id, value: '', error: '' })}>
-              <Avatar url={c.avatar_url} name={c.name} size={28} /> {c.name} — {c.handle}
-            </button>
-          )}
-        </div>
-      ))}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap' }}>
+        <h2 style={{ margin: 0 }}>Create a new profile</h2>
+        <a href="#" onClick={(e) => { e.preventDefault(); setMode('signin'); }} style={{ color: 'var(--cyan)', fontSize: 13, whiteSpace: 'nowrap' }}>
+          Already have an account? Sign in here
+        </a>
       </div>
-      {pinAttempt.error && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{pinAttempt.error}</p>}
-
-      <hr style={{ border: 'none', borderTop: '1px solid var(--line)', margin: '16px 0' }} />
-      <h2 style={{ fontSize: 16 }}>Create a new profile</h2>
-      {creators.length > 0 && (
-        <p className="dim" style={{ marginTop: -6, marginBottom: 12 }}>
-          Already have an account? <a href="#login-list" onClick={(e) => { e.preventDefault(); document.getElementById('login-list').scrollIntoView({ behavior: 'smooth' }); }} style={{ color: 'var(--cyan)' }}>Sign in here</a>
-        </p>
-      )}
-      <form onKeyDown={focusNext} onSubmit={(e) => { e.preventDefault(); if (!form.name || !form.pin) { alert('Nickname and PIN are required.'); return; } onCreate(form, pendingAvatarFile); }}>
+      <p className="dim" style={{ marginTop: 6 }}>Once you create your profile, this browser will remember you for 30 days.</p>
+      <form onKeyDown={focusNext} onSubmit={(e) => { e.preventDefault(); if (!createForm.name || !createForm.pin) { alert('Nickname and PIN are required.'); return; } onCreate(createForm, pendingAvatarFile); }}>
         <div className="field">
           <label>Profile picture (optional)</label>
           <div className="row" style={{ alignItems: 'center' }}>
-            <Avatar url={pendingAvatarFile ? URL.createObjectURL(pendingAvatarFile) : null} name={form.name} size={48} />
+            <Avatar url={pendingAvatarFile ? URL.createObjectURL(pendingAvatarFile) : null} name={createForm.name} size={48} />
             <label className="btn ghost" style={{ cursor: 'pointer' }}>
               {pendingAvatarFile ? 'Change photo' : 'Choose photo'}
               <input type="file" accept="image/*" onChange={(e) => setPendingAvatarFile(e.target.files[0] || null)} style={{ display: 'none' }} />
@@ -420,29 +440,29 @@ function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogi
           <div className="dim">If you skip this, your nickname's first letter is used instead.</div>
         </div>
         <div className="row">
-          <div className="field" style={{ flex: 1 }}><label>Nickname</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-          <div className="field" style={{ flex: 1 }}><label>TikTok Handle</label><input value={form.handle} onChange={(e) => setForm({ ...form, handle: e.target.value })} placeholder="e.g. miachen.live (no @ needed)" />
+          <div className="field" style={{ flex: 1 }}><label>Nickname</label><input value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} /></div>
+          <div className="field" style={{ flex: 1 }}><label>TikTok Handle</label><input value={createForm.handle} onChange={(e) => setCreateForm({ ...createForm, handle: e.target.value })} placeholder="e.g. miachen.live (no @ needed)" />
             <div className="dim">No need to include the @ — just the handle itself.</div>
           </div>
         </div>
         <div className="row">
           <div className="field" style={{ flex: 1 }}><label>Diamonds (30d)</label>
-            <DiamondInput value={form.diamonds} onChange={(v) => setForm({ ...form, diamonds: v })} />
+            <DiamondInput value={createForm.diamonds} onChange={(v) => setCreateForm({ ...createForm, diamonds: v })} />
           </div>
           <div className="field" style={{ flex: 1 }}><label>League</label>
-            <select value={form.league} onChange={(e) => setForm({ ...form, league: e.target.value })}>
+            <select value={createForm.league} onChange={(e) => setCreateForm({ ...createForm, league: e.target.value })}>
               <option value="">Select…</option>
               {LEAGUE_OPTIONS.map((l) => <option key={l} value={l}>{l}</option>)}
             </select>
           </div>
           <div className="field" style={{ flex: 1 }}><label>Timezone</label>
-            <select value={form.tz} onChange={(e) => setForm({ ...form, tz: e.target.value })}>
+            <select value={createForm.tz} onChange={(e) => setCreateForm({ ...createForm, tz: e.target.value })}>
               {ZONES.map((z) => <option key={z.code} value={z.code}>{z.label}</option>)}
             </select>
           </div>
         </div>
         <div className="field" style={{ maxWidth: 220 }}><label>Gender (optional)</label>
-          <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
+          <select value={createForm.gender} onChange={(e) => setCreateForm({ ...createForm, gender: e.target.value })}>
             <option value="">Prefer not to say</option>
             <option value="male">Male</option>
             <option value="female">Female</option>
@@ -453,13 +473,13 @@ function ProfileStep({ me, creators, pinAttempt, setPinAttempt, onCreate, onLogi
           <div className="row">
             {BATTLE_TYPES.map((t) => (
               <label key={t.key} className="chip">
-                <input type="checkbox" checked={form.tags.includes(t.key)} onChange={() => toggleTag(t.key)} /> {t.label}
+                <input type="checkbox" checked={createForm.tags.includes(t.key)} onChange={() => toggleTag(t.key)} /> {t.label}
               </label>
             ))}
           </div>
         </div>
         <div className="field"><label>Set a PIN (6+ characters)</label>
-          <PasswordField value={form.pin} onChange={(e) => setForm({ ...form, pin: e.target.value })} minLength={6} placeholder="Choose a PIN" />
+          <PasswordField value={createForm.pin} onChange={(e) => setCreateForm({ ...createForm, pin: e.target.value })} minLength={6} placeholder="Choose a PIN" />
         </div>
         <button className="btn" type="submit">Create Profile &amp; Continue</button>
       </form>
@@ -600,7 +620,7 @@ function NeedsResponseCard({ b, me, nameOf, handleOf, onRespond, onRebuttal }) {
       <div className="side">{nameOf(b.creator_a)}<div className="dim">{handleOf(b.creator_a)}</div></div>
       <div className="mid">VS</div>
       <div className="side b">{nameOf(b.creator_b)}<div className="dim">{handleOf(b.creator_b)}</div></div>
-      <div style={{ padding: 12, width: '100%' }}>
+      <div className="vs-actions">
         {!rebutting ? (
           <div className="row">
             <button className="btn ghost" onClick={() => onRespond(b.id, 'decline')}>Decline</button>
@@ -706,7 +726,7 @@ function BattlesStep({ me, creators, battles, onChange }) {
           <div className="side">{nameOf(b.creator_a)}</div>
           <div className="mid">VS</div>
           <div className="side b">{nameOf(b.creator_b)}</div>
-          <div style={{ padding: 12 }}><button className="btn ghost" onClick={() => remove(b.id)}>Cancel invite</button></div>
+          <div className="vs-actions"><button className="btn ghost" onClick={() => remove(b.id)}>Cancel invite</button></div>
         </div>
       ))}
 
@@ -717,7 +737,7 @@ function BattlesStep({ me, creators, battles, onChange }) {
           <div className="side">{nameOf(b.creator_a)}<br /><a className="dim" href={tiktokUrl(handleOf(b.creator_a))} target="_blank" rel="noopener noreferrer">TikTok ↗</a></div>
           <div className="mid">VS</div>
           <div className="side b">{nameOf(b.creator_b)}<br /><a className="dim" href={tiktokUrl(handleOf(b.creator_b))} target="_blank" rel="noopener noreferrer">TikTok ↗</a></div>
-          <div style={{ padding: 12 }}>
+          <div className="vs-actions">
             <div className="dim">{new Date(b.datetime_utc).toLocaleString()}</div>
             <div className="row" style={{ marginTop: 8 }}>
               <button className="btn ghost" style={{ fontSize: 12, padding: '6px 10px' }} onClick={() => downloadICS({
