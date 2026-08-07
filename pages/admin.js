@@ -36,6 +36,7 @@ export default function Admin() {
   const [managerCodeForm, setManagerCodeForm] = useState('');
   const [managerCodeMsg, setManagerCodeMsg] = useState('');
   const [accentColor, setAccentColor] = useState('');
+  const [referralCopied, setReferralCopied] = useState(false);
   const [accentMsg, setAccentMsg] = useState('');
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotForm, setForgotForm] = useState({ agencyCode: '', contactEmail: '' });
@@ -299,6 +300,25 @@ export default function Admin() {
     });
     const data = await res.json();
     setForgotMsg(data.message || data.error || 'Request sent.');
+  }
+
+  const referralLink = agency?.referral_code && typeof window !== 'undefined'
+    ? `${window.location.origin}/signup?ref=${agency.referral_code}` : '';
+
+  function copyReferralLink() {
+    navigator.clipboard.writeText(referralLink);
+    setReferralCopied(true);
+    setTimeout(() => setReferralCopied(false), 2000);
+  }
+
+  async function shareReferralLink() {
+    const text = `Join Battle Room using my referral code ${agency.referral_code}: ${referralLink}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Battle Room', text, url: referralLink }); return; }
+      catch (e) { /* user cancelled the share sheet — fall through to copy */ }
+    }
+    navigator.clipboard.writeText(text);
+    alert('Link copied — paste it wherever you\u2019d like to send it.');
   }
 
   function focusNext(e) {
@@ -587,6 +607,17 @@ export default function Admin() {
             <h2>Billing</h2>
             <p className="dim">Status: <b>{agency.status}</b> · Plan: <b>{agency.plan_tier}</b> ({agency.billing_period})</p>
 
+            {agency.status === 'active' && agency.stripe_cancel_at_period_end && agency.stripe_current_period_end && (
+              <div className="card" style={{ borderColor: 'var(--pink)', marginTop: 10, marginBottom: 10 }}>
+                <b style={{ color: 'var(--pink)' }}>Subscription canceled — access continues until it runs out.</b>
+                <p className="dim" style={{ margin: '6px 0 0' }}>
+                  You've already paid through this period, so nothing changes yet. Full access ends on{' '}
+                  <b>{new Date(agency.stripe_current_period_end).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</b>{' '}
+                  ({Math.max(0, Math.ceil((new Date(agency.stripe_current_period_end) - new Date()) / (24 * 60 * 60 * 1000)))} days left). Changed your mind? Manage Subscription below to resubscribe.
+                </p>
+              </div>
+            )}
+
             {pendingBilling ? (
               <div>
                 {!billingCodeSent ? (
@@ -628,7 +659,14 @@ export default function Admin() {
           <div className="card">
             <h2>Referral</h2>
             {agency.referral_code ? (
-              <p className="dim">Your referral code: <b style={{ color: 'var(--gold)' }}>{agency.referral_code}</b> — share it with other agencies. When someone you refer becomes a paying customer, you get a free month automatically.</p>
+              <>
+                <p className="dim">Your referral code: <b style={{ color: 'var(--gold)' }}>{agency.referral_code}</b> — share it with other agencies. When someone you refer becomes a paying customer, you get a free month automatically.</p>
+                <div className="row" style={{ alignItems: 'center', marginTop: 8 }}>
+                  <input readOnly value={referralLink} style={{ flex: 1, minWidth: 200 }} />
+                  <button className="btn ghost" onClick={copyReferralLink}>{referralCopied ? 'Copied ✓' : 'Copy Link'}</button>
+                  <button className="btn ghost" onClick={shareReferralLink}>Send to Someone</button>
+                </div>
+              </>
             ) : <p className="dim">No referral code on file.</p>}
           </div>
 

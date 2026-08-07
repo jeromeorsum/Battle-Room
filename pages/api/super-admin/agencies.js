@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     const { data: agencies, error } = await supabaseAdmin
       .from('agencies')
-      .select('id, name, agency_code, contact_email, contact_phone, plan_tier, billing_period, status, max_creators, created_at')
+      .select('id, name, agency_code, contact_email, contact_phone, plan_tier, billing_period, status, max_creators, created_at, stripe_current_period_end, stripe_cancel_at_period_end')
       .order('created_at', { ascending: false });
     if (error) return res.status(500).json({ error: error.message });
 

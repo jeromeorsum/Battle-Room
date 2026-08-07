@@ -174,6 +174,11 @@ export default function SuperAdmin() {
                 <div className="dim" style={{ marginTop: 6 }}>
                   {a.creatorCount}/{a.max_creators} creators · created {new Date(a.created_at).toLocaleDateString()}
                 </div>
+                {a.status === 'active' && a.stripe_cancel_at_period_end && a.stripe_current_period_end && (
+                  <div style={{ marginTop: 4, fontSize: 12, color: 'var(--pink)' }}>
+                    ⚠ Canceled — access ends {new Date(a.stripe_current_period_end).toLocaleDateString()} ({Math.max(0, Math.ceil((new Date(a.stripe_current_period_end) - new Date()) / (24 * 60 * 60 * 1000)))}d left)
+                  </div>
+                )}
                 <div className="dim" style={{ marginTop: 4 }}>
                   {a.contact_email ? `✉️ ${a.contact_email}` : 'No contact email on file'}
                   {a.contact_phone ? ` · 📞 ${a.contact_phone}` : ''}

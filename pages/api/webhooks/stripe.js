@@ -84,9 +84,19 @@ export default async function handler(req, res) {
       case 'customer.subscription.updated': {
         const sub = event.data.object;
         const status = mapStatus(sub.status);
-        if (status) {
-          await supabaseAdmin.from('agencies').update({ status }).eq('stripe_subscription_id', sub.id);
-        }
+        // Stripe's subscription.status stays 'active' the whole time
+        // someone is in a "cancels at period end" grace window — it only
+        // flips once the period actually ends (which fires
+        // subscription.deleted below). So access naturally continues
+        // through the paid-for period already; this just captures the
+        // date/flag so we can *show* the countdown to the agency and to
+        // super admin.
+        const update = {
+          stripe_current_period_end: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
+          stripe_cancel_at_period_end: !!sub.cancel_at_period_end
+        };
+        if (status) update.status = status;
+        await supabaseAdmin.from('agencies').update(update).eq('stripe_subscription_id', sub.id);
         break;
       }
       case 'customer.subscription.deleted': {
@@ -95,7 +105,7 @@ export default async function handler(req, res) {
         // cancels themselves via the billing portal, or Stripe cancels
         // after repeated failed payments, this event fires either way —
         // no one has to remember to click a "cut off" button.
-        await supabaseAdmin.from('agencies').update({ status: 'canceled' }).eq('stripe_subscription_id', sub.id);
+        await supabaseAdmin.from('agencies').update({ status: 'canceled', stripe_cancel_at_period_end: false }).eq('stripe_subscription_id', sub.id);
         break;
       }
       case 'invoice.payment_failed': {

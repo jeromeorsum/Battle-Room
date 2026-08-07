@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 import { PRICING_TIERS } from '../lib/pricing';
 import PasswordField from '../components/PasswordField';
 
 export default function Signup() {
+  const router = useRouter();
   const [billingPeriod, setBillingPeriod] = useState('monthly');
   const [form, setForm] = useState({ name: '', adminCode: '', managerCode: '', planTier: 'starter', contactEmail: '', contactPhone: '', referralCode: '' });
   const [ageAttested, setAgeAttested] = useState(false);
@@ -10,6 +12,12 @@ export default function Signup() {
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
   const [copiedReferral, setCopiedReferral] = useState(false);
+
+  useEffect(() => {
+    if (router.query.ref) {
+      setForm((f) => ({ ...f, referralCode: String(router.query.ref).toUpperCase() }));
+    }
+  }, [router.query.ref]);
 
   async function submit(e) {
     if (e) e.preventDefault();
