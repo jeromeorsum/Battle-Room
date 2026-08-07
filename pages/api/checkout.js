@@ -3,14 +3,19 @@ import { readSession, COOKIES } from '../../lib/session';
 import { stripe } from '../../lib/stripeAdmin';
 import { priceIdFor } from '../../lib/priceMap';
 import { logError } from '../../lib/logger';
+import { verifyBillingCode } from '../../lib/billingVerify';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') { res.setHeader('Allow', ['POST']); return res.status(405).end(); }
 
   const session = readSession(req, COOKIES.ADMIN);
   if (!session) return res.status(401).json({ error: 'Log in first.' });
+  if (session.role !== 'admin') return res.status(403).json({ error: 'Only an admin can do this — managers don\'t have access to billing.' });
 
-  const { planTier, billingPeriod } = req.body;
+  const { planTier, billingPeriod, verificationCode } = req.body;
+  const codeOk = await verifyBillingCode(session.agencyId, verificationCode);
+  if (!codeOk) return res.status(401).json({ error: 'Invalid or expired verification code. Request a new one.' });
+
   const priceId = priceIdFor(planTier, billingPeriod);
   if (!priceId) return res.status(400).json({ error: 'That plan isn\u2019t configured with a Stripe Price ID yet. See STRIPE_SETUP.md.' });
 

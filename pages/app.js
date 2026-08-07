@@ -2,10 +2,14 @@ import { useEffect, useState } from 'react';
 import { ZONES, BATTLE_TYPES, LEAGUE_OPTIONS, zoneByCode } from '../lib/constants';
 import { enablePushNotifications, disablePushNotifications } from '../lib/pushClient';
 import { downloadICS, googleCalendarUrl } from '../lib/calendarClient';
+import { shareOrDownloadBattleCard } from '../lib/shareCard';
 import Avatar from '../components/Avatar';
 import PasswordField from '../components/PasswordField';
 import DateTimePicker from '../components/DateTimePicker';
 import DiamondInput from '../components/DiamondInput';
+import InstallPrompt from '../components/InstallPrompt';
+import { SkeletonList } from '../components/Skeleton';
+import QuickSearch from '../components/QuickSearch';
 
 function tzLabel(code) { return zoneByCode(code).code; }
 function tiktokUrl(handle) { return 'https://www.tiktok.com/@' + (handle || '').replace(/^@/, ''); }
@@ -125,7 +129,7 @@ export default function Home() {
     return null;
   }
 
-  if (loading) return <div className="wrap"><p className="dim">Loading…</p></div>;
+  if (loading) return <div className="wrap"><SkeletonList count={2} /></div>;
 
   if (!agency) {
     return (
@@ -165,6 +169,8 @@ export default function Home() {
       </div>
 
       {me && <PushReminder />}
+      {me && <InstallPrompt />}
+      {me && <QuickSearch creators={creators} myId={me.id} onSelect={() => setStep('opponents')} />}
 
       {step === 'profile' && (
         <ProfileStep
@@ -177,7 +183,7 @@ export default function Home() {
       )}
       {step === 'board' && me && <BoardStep me={me} />}
       {step === 'battles' && me && (
-        <BattlesStep me={me} creators={creators} battles={battles} onChange={refresh} />
+        <BattlesStep me={me} creators={creators} battles={battles} onChange={refresh} onFindOpponent={() => setStep('opponents')} onFindBattle={() => setStep('board')} />
       )}
     </div>
   );
@@ -311,9 +317,19 @@ function ProfileStep({ me, creators, agencyId, onCreate, onLogin, onSaved }) {
   }
 
   if (me) {
+    const completenessChecks = [avatarUrl, me.handle, me.league, (me.tags || []).length > 0, me.gender];
+    const completenessPct = Math.round((completenessChecks.filter(Boolean).length / completenessChecks.length) * 100);
     return (
       <form className="card" onSubmit={save} onKeyDown={focusNext}>
         <h2>My Profile</h2>
+        {completenessPct < 100 && (
+          <div style={{ marginBottom: 14 }}>
+            <div className="dim" style={{ marginBottom: 4 }}>Profile {completenessPct}% complete</div>
+            <div style={{ height: 6, borderRadius: 999, background: 'var(--bg-raised)', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${completenessPct}%`, background: 'var(--gold)', transition: 'width .3s' }} />
+            </div>
+          </div>
+        )}
         <AvatarUploader me={{ ...me, avatar_url: avatarUrl }} onUploaded={setAvatarUrl} />
         <div className="row">
           <div className="field" style={{ flex: 1 }}><label>Nickname</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
@@ -488,12 +504,38 @@ function LoggedOutView({ creators, agencyId, onCreate, onLogin }) {
 }
 
 function OpponentsStep({ me, creators, onPropose }) {
-  const others = creators.filter((c) => c.id !== me.id);
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('match');
+  const [favorites, setFavorites] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(`battleroom-favorites-${me.id}`) || '[]')); }
+    catch (e) { return new Set(); }
+  });
+
+  function toggleFavorite(id) {
+    setFavorites((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      localStorage.setItem(`battleroom-favorites-${me.id}`, JSON.stringify([...next]));
+      return next;
+    });
+  }
+
+  const q = search.trim().toLowerCase();
+  const others = creators.filter((c) => c.id !== me.id && (!q || c.name.toLowerCase().includes(q) || (c.handle || '').toLowerCase().includes(q)));
+
   const scored = others.map((s) => {
     const diamondDiff = Math.abs((s.diamonds || 0) - (me.diamonds || 0));
     const tzPenalty = s.tz === me.tz ? 0 : 5000;
-    return { s, score: diamondDiff + tzPenalty };
-  }).sort((a, b) => a.score - b.score);
+    const favoriteBonus = favorites.has(s.id) ? -1000000 : 0; // favorites always float to the top
+    return { s, score: diamondDiff + tzPenalty + favoriteBonus };
+  });
+
+  if (sortBy === 'match') scored.sort((a, b) => a.score - b.score);
+  else if (sortBy === 'diamonds') scored.sort((a, b) => (favorites.has(b.s.id) - favorites.has(a.s.id)) || (b.s.diamonds || 0) - (a.s.diamonds || 0));
+  else if (sortBy === 'league') scored.sort((a, b) => (favorites.has(b.s.id) - favorites.has(a.s.id)) || (a.s.league || '').localeCompare(b.s.league || ''));
+  else if (sortBy === 'name') scored.sort((a, b) => (favorites.has(b.s.id) - favorites.has(a.s.id)) || a.s.name.localeCompare(b.s.name));
+
+  const isRecentlyActive = (s) => s.last_active_at && (Date.now() - new Date(s.last_active_at).getTime()) < 7 * 24 * 60 * 60 * 1000;
 
   return (
     <div>
@@ -501,18 +543,38 @@ function OpponentsStep({ me, creators, onPropose }) {
         <Avatar url={me.avatar_url} name={me.name} size={36} />
         <div><b>You:</b> {me.name} · {(me.diamonds || 0).toLocaleString()} 💎 · {me.league || '—'} · {tzLabel(me.tz)}</div>
       </div>
+      <div className="row" style={{ marginBottom: 14 }}>
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or handle…" style={{ flex: 2, minWidth: 160 }} />
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} style={{ flex: 1, minWidth: 140 }}>
+          <option value="match">Best Match</option>
+          <option value="diamonds">Diamonds (highest)</option>
+          <option value="league">League</option>
+          <option value="name">Name (A-Z)</option>
+        </select>
+      </div>
+      {scored.length === 0 && <div className="empty">No creators match your search.</div>}
       <div className="opp-grid">
         {scored.map(({ s }) => (
           <div key={s.id} className="card">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Avatar url={s.avatar_url} name={s.name} size={40} />
-              <div>
-                <div style={{ fontWeight: 700 }}>{s.name}</div>
-                <div className="dim">{s.handle}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Avatar url={s.avatar_url} name={s.name} size={40} />
+                <div>
+                  <div style={{ fontWeight: 700 }}>{s.name}</div>
+                  <div className="dim">{s.handle}</div>
+                </div>
               </div>
+              <button
+                onClick={() => toggleFavorite(s.id)}
+                title={favorites.has(s.id) ? 'Remove favorite' : 'Add favorite'}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, padding: 0, minHeight: 0, color: favorites.has(s.id) ? 'var(--gold)' : 'var(--text-dim)' }}
+              >
+                {favorites.has(s.id) ? '★' : '☆'}
+              </button>
             </div>
             <div style={{ marginTop: 8 }}>{(s.diamonds || 0).toLocaleString()} 💎</div>
             <div className="dim">{s.league || '—'} · {tzLabel(s.tz)}</div>
+            {isRecentlyActive(s) && <div className="badge" style={{ borderColor: 'var(--green)', color: 'var(--green)', display: 'inline-block', marginTop: 4 }}>Active recently</div>}
             <div className="row" style={{ marginTop: 6 }}>{(s.tags || []).map((t) => <span key={t} className="badge">{t}</span>)}</div>
             <a className="dim" href={tiktokUrl(s.handle)} target="_blank" rel="noopener noreferrer">View on TikTok ↗</a>
             <div style={{ marginTop: 8 }}><button className="btn ghost" onClick={onPropose}>Propose Battle</button></div>
@@ -588,7 +650,7 @@ function BoardStep({ me }) {
         <button className="btn" type="submit" disabled={posting}>{posting ? 'Posting…' : 'Post'}</button>
       </form>
       {loadError && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{loadError}</p>}
-      {loading ? <p className="dim">Loading…</p> : posts.length === 0 ? <p className="dim">No posts yet — be the first.</p> : posts.map((p) => (
+      {loading ? <SkeletonList count={3} /> : posts.length === 0 ? <p className="dim">No posts yet — be the first.</p> : posts.map((p) => (
         <div key={p.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
           <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
             <Avatar url={p.creators?.avatar_url} name={p.creators ? p.creators.name : '?'} size={32} />
@@ -648,12 +710,31 @@ function NeedsResponseCard({ b, me, nameOf, handleOf, onRespond, onRebuttal }) {
   );
 }
 
-function BattlesStep({ me, creators, battles, onChange }) {
+function exportBattlesCSV(battles, nameOf) {
+  const header = ['Creator A', 'Creator B', 'Date/Time (UTC)', 'Notes'];
+  const rows = battles.map((b) => [nameOf(b.creator_a), nameOf(b.creator_b), new Date(b.datetime_utc).toLocaleString(), b.notes || '']);
+  const escapeCell = (v) => `"${String(v).replace(/"/g, '""')}"`;
+  const csv = [header, ...rows].map((row) => row.map(escapeCell).join(',')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'battle-schedule.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+function BattlesStep({ me, creators, battles, onChange, onFindOpponent, onFindBattle }) {
   const [form, setForm] = useState({ opponent: '', datetime: '', tz: me.tz, notes: '' });
   const nameOf = (id) => creators.find((c) => c.id === id)?.name || 'Unknown';
   const handleOf = (id) => creators.find((c) => c.id === id)?.handle || '';
+  const [optimisticPatches, setOptimisticPatches] = useState({}); // id -> partial patch
+  const [optimisticRemovals, setOptimisticRemovals] = useState(new Set());
 
-  const mine = battles.filter((b) => b.creator_a === me.id || b.creator_b === me.id);
+  const visibleBattles = battles
+    .filter((b) => !optimisticRemovals.has(b.id))
+    .map((b) => (optimisticPatches[b.id] ? { ...b, ...optimisticPatches[b.id] } : b));
+
+  const mine = visibleBattles.filter((b) => b.creator_a === me.id || b.creator_b === me.id);
   const needsResponse = mine.filter((b) => !b.declined && ((b.creator_a === me.id && !b.accepted_a) || (b.creator_b === me.id && !b.accepted_b)));
   const waiting = mine.filter((b) => !b.declined && !needsResponse.includes(b) && !(b.accepted_a && b.accepted_b));
   const confirmed = mine.filter((b) => !b.declined && b.accepted_a && b.accepted_b);
@@ -670,11 +751,18 @@ function BattlesStep({ me, creators, battles, onChange }) {
   }
 
   async function respond(id, action) {
-    await fetch(`/api/battles/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }) });
+    const patch = action === 'accept'
+      ? (battles.find((b) => b.id === id)?.creator_a === me.id ? { accepted_a: true } : { accepted_b: true })
+      : { declined: true };
+    setOptimisticPatches((prev) => ({ ...prev, [id]: patch })); // optimistic
+    const res = await fetch(`/api/battles/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }) });
+    if (!res.ok) setOptimisticPatches((prev) => { const next = { ...prev }; delete next[id]; return next; }); // revert
     onChange();
   }
   async function remove(id) {
-    await fetch(`/api/battles/${id}`, { method: 'DELETE' });
+    setOptimisticRemovals((prev) => new Set(prev).add(id)); // optimistic
+    const res = await fetch(`/api/battles/${id}`, { method: 'DELETE' });
+    if (!res.ok) setOptimisticRemovals((prev) => { const next = new Set(prev); next.delete(id); return next; }); // revert
     onChange();
   }
 
@@ -730,8 +818,24 @@ function BattlesStep({ me, creators, battles, onChange }) {
         </div>
       ))}
 
-      <h3>Your Calendar</h3>
-      {confirmed.length === 0 && <p className="dim">No confirmed battles yet.</p>}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+        <h3 style={{ margin: 0 }}>Your Calendar</h3>
+        {confirmed.length > 0 && (
+          <div className="row">
+            <button className="btn ghost" style={{ fontSize: 12 }} onClick={() => window.print()}>🖨️ Print</button>
+            <button className="btn ghost" style={{ fontSize: 12 }} onClick={() => exportBattlesCSV(confirmed, nameOf)}>⬇ Export CSV</button>
+          </div>
+        )}
+      </div>
+      {confirmed.length === 0 && (
+        <div className="empty" style={{ border: '1px dashed var(--line)', borderRadius: 12, padding: '20px', textAlign: 'center' }}>
+          <p className="dim" style={{ margin: 0 }}>No confirmed battles yet.</p>
+          <div className="row" style={{ justifyContent: 'center', marginTop: 10 }}>
+            <button className="btn ghost" onClick={onFindOpponent}>Find an Opponent</button>
+            <button className="btn ghost" onClick={onFindBattle}>Post on the Board</button>
+          </div>
+        </div>
+      )}
       {confirmed.map((b) => (
         <div key={b.id} className="vs">
           <div className="side">{nameOf(b.creator_a)}<br /><a className="dim" href={tiktokUrl(handleOf(b.creator_a))} target="_blank" rel="noopener noreferrer">TikTok ↗</a></div>
@@ -747,6 +851,10 @@ function BattlesStep({ me, creators, battles, onChange }) {
                 href={googleCalendarUrl({ title: `${nameOf(b.creator_a)} vs ${nameOf(b.creator_b)} — TikTok LIVE Battle`, notes: b.notes, startUTC: b.datetime_utc })}>
                 ＋ Google Calendar
               </a>
+              <button className="btn ghost" style={{ fontSize: 12, padding: '6px 10px' }} onClick={() => shareOrDownloadBattleCard({
+                nameA: nameOf(b.creator_a), nameB: nameOf(b.creator_b),
+                dateStr: new Date(b.datetime_utc).toLocaleDateString(), timeStr: new Date(b.datetime_utc).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+              })}>📤 Share</button>
               <button className="btn ghost" style={{ fontSize: 12, padding: '6px 10px' }} onClick={() => remove(b.id)}>Remove</button>
             </div>
           </div>

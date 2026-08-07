@@ -40,8 +40,8 @@ export default async function handler(req, res) {
     }
     if (!localDateTime) return res.status(400).json({ error: 'Missing date/time.' });
 
-    const status = await getAgencyStatus(agencyId);
-    if (!canWrite(status)) return res.status(402).json({ error: 'This agency\u2019s subscription is inactive. Contact your agency admin.' });
+    const { status, trialEndsAt } = await getAgencyStatus(agencyId);
+    if (!canWrite(status, trialEndsAt)) return res.status(402).json({ error: 'This agency\u2019s subscription is inactive. Contact your agency admin.' });
 
     const { data: bothCreators, error: cErr } = await supabaseAdmin
       .from('creators').select('id, agency_id').in('id', [creatorA, creatorB]);

@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 import { readSession, COOKIES } from '../../../lib/session';
+import { logAudit } from '../../../lib/auditLog';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') { res.setHeader('Allow', ['POST']); return res.status(405).end(); }
@@ -14,5 +15,6 @@ export default async function handler(req, res) {
   const admin_code_hash = await bcrypt.hash(String(newCode), 12);
   const { error } = await supabaseAdmin.from('agencies').update({ admin_code_hash }).eq('id', agencyId);
   if (error) return res.status(500).json({ error: error.message });
+  await logAudit(agencyId, 'Platform (super admin)', 'Reset admin code');
   return res.status(200).json({ ok: true });
 }

@@ -3,6 +3,15 @@
   --text: #f2f2f5; --text-dim: #8d8d9a;
   --cyan: #25f4ee; --pink: #fe2c55; --gold: #ffd447; --green: #3ee08a; --purple: #b98bff;
 }
+@keyframes br-pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+@media print {
+  .nav-menu-wrap, .tabs, form, .btn, .btn.ghost, button { display: none !important; }
+  body, .wrap { background: white !important; color: black !important; }
+  .card, .vs { border: 1px solid #ccc !important; background: white !important; color: black !important; break-inside: avoid; }
+  .dim { color: #555 !important; }
+  a { color: black !important; text-decoration: none !important; }
+}
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: -apple-system, Inter, sans-serif; }
 .wrap { max-width: 880px; margin: 0 auto; padding: 24px 16px 60px; }

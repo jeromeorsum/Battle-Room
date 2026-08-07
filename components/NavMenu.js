@@ -4,7 +4,13 @@ const LINKS = [
   { href: '/', label: '🏠 Home' },
   { href: '/app', label: '🔑 I Have an Agency Code' },
   { href: '/signup', label: '✍️ Sign Up My Agency' },
-  { href: '/admin', label: '🛠 Agency Admin Login' }
+  { href: '/admin', label: '🛠 Agency Admin Login' },
+  { href: '/help', label: '❓ Help & FAQ' },
+  { href: '/feedback', label: '💬 Send Feedback' },
+  { href: '/roadmap', label: '🗺️ Roadmap' },
+  { href: '/changelog', label: '📋 What\u2019s New' },
+  { href: '/status', label: '🟢 System Status' },
+  { href: '/compliance', label: '📜 Compliance' }
 ];
 
 export default function NavMenu() {

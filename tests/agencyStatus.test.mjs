@@ -2,9 +2,22 @@ import test from 'node:test';
 import assert from 'node:assert';
 import { canWrite, isLockedOut } from '../lib/agencyStatus.js';
 
-test('canWrite: trialing and active agencies can write', () => {
-  assert.strictEqual(canWrite('trialing'), true);
+test('canWrite: active agencies can always write', () => {
   assert.strictEqual(canWrite('active'), true);
+});
+
+test('canWrite: trialing with no expiry set (legacy) can write', () => {
+  assert.strictEqual(canWrite('trialing', null), true);
+});
+
+test('canWrite: trialing with a future expiry can write', () => {
+  const future = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  assert.strictEqual(canWrite('trialing', future), true);
+});
+
+test('canWrite: trialing with a past expiry cannot write', () => {
+  const past = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  assert.strictEqual(canWrite('trialing', past), false);
 });
 
 test('canWrite: past_due and canceled agencies cannot write', () => {

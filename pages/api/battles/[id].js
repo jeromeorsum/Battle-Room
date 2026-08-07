@@ -20,8 +20,8 @@ export default async function handler(req, res) {
     // proven via their session — not by whoever the client claims "actorId" to be.
     if (!isParticipant) return res.status(403).json({ error: 'Only a participant can respond to this battle.' });
 
-    const { data: agency } = await supabaseAdmin.from('agencies').select('status').eq('id', battle.agency_id).single();
-    if (!canWrite(agency?.status)) return res.status(402).json({ error: 'This agency\u2019s subscription is inactive. Contact your agency admin.' });
+    const { data: agency } = await supabaseAdmin.from('agencies').select('status, trial_ends_at').eq('id', battle.agency_id).single();
+    if (!canWrite(agency?.status, agency?.trial_ends_at)) return res.status(402).json({ error: 'This agency\u2019s subscription is inactive. Contact your agency admin.' });
 
     const actorId = creatorSession.creatorId;
     const { action } = req.body;

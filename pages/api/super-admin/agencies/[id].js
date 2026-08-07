@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '../../../../lib/supabaseAdmin';
 import { readSession, COOKIES } from '../../../../lib/session';
+import { logAudit } from '../../../../lib/auditLog';
 
 export default async function handler(req, res) {
   const session = readSession(req, COOKIES.SUPERADMIN);
@@ -17,6 +18,8 @@ export default async function handler(req, res) {
 
     const { data, error } = await supabaseAdmin.from('agencies').update(update).eq('id', id).select('*').single();
     if (error) return res.status(500).json({ error: error.message });
+    const changes = Object.entries(update).map(([k, v]) => `${k}=${v}`).join(', ');
+    await logAudit(id, 'Platform (super admin)', 'Updated agency settings', changes);
     return res.status(200).json(data);
   }
 

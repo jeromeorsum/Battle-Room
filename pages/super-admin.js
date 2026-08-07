@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { PRICING_TIERS, tierById } from '../lib/pricing';
 import PasswordField from '../components/PasswordField';
+import { SkeletonList } from '../components/Skeleton';
 
 export default function SuperAdmin() {
   const [code, setCode] = useState('');
@@ -74,7 +75,7 @@ export default function SuperAdmin() {
     if (res.ok) alert(`New admin code set for ${name}.`); else alert('Could not reset admin code.');
   }
 
-  if (loading) return <div className="wrap"><p className="dim">Loading…</p></div>;
+  if (loading) return <div className="wrap"><SkeletonList count={3} /></div>;
 
   if (!unlocked) {
     return (
@@ -155,7 +156,7 @@ export default function SuperAdmin() {
             </div>
             {openRoster === a.id && (
               <div style={{ marginTop: 12, borderTop: '1px solid var(--line)', paddingTop: 12 }}>
-                {rosterLoading ? <p className="dim">Loading…</p> : rosterCreators.length === 0 ? <p className="dim">No creators yet.</p> : (
+                {rosterLoading ? <SkeletonList count={2} /> : rosterCreators.length === 0 ? <p className="dim">No creators yet.</p> : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {rosterCreators.map((c) => (
                       <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-raised)', border: '1px solid var(--line)', borderRadius: 8, padding: '8px 12px' }}>

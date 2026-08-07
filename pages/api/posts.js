@@ -22,8 +22,8 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     if (!creatorSession) return res.status(401).json({ error: 'Log in first.' });
 
-    const { data: agency } = await supabaseAdmin.from('agencies').select('status').eq('id', creatorSession.agencyId).single();
-    if (!canWrite(agency?.status)) return res.status(402).json({ error: 'This agency\u2019s subscription is inactive. Contact your agency admin.' });
+    const { data: agency } = await supabaseAdmin.from('agencies').select('status, trial_ends_at').eq('id', creatorSession.agencyId).single();
+    if (!canWrite(agency?.status, agency?.trial_ends_at)) return res.status(402).json({ error: 'This agency\u2019s subscription is inactive. Contact your agency admin.' });
 
     const { message } = req.body;
     if (!message || !message.trim()) return res.status(400).json({ error: 'Message is required.' });

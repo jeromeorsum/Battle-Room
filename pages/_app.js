@@ -1,6 +1,7 @@
 import { Component, useEffect, useState } from 'react';
 import '../styles/globals.css';
 import NavMenu from '../components/NavMenu';
+import { TOS_VERSION } from '../lib/tosVersion';
 
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null }; }
@@ -28,13 +29,13 @@ export default function App({ Component, pageProps }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const seen = typeof window !== 'undefined' ? localStorage.getItem('battleroom-tos-ack') : 'true';
-    setAcknowledged(seen === 'true');
+    const seenVersion = typeof window !== 'undefined' ? localStorage.getItem('battleroom-tos-ack-version') : TOS_VERSION;
+    setAcknowledged(seenVersion === TOS_VERSION);
     setReady(true);
   }, []);
 
   function acknowledge() {
-    localStorage.setItem('battleroom-tos-ack', 'true');
+    localStorage.setItem('battleroom-tos-ack-version', TOS_VERSION);
     setAcknowledged(true);
   }
 

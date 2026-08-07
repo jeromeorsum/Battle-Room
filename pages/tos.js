@@ -3,6 +3,7 @@ export default function TOS() {
     <div className="wrap">
       <div className="card">
         <h1>Terms of Service &amp; User Agreement</h1>
+        <p className="dim" style={{ marginBottom: 4 }}>Last updated: August 5, 2026</p>
         <p className="dim">
           This is a placeholder. Replace this page with real terms reviewed by a
           lawyer before relying on it — this text is not legal advice and isn't

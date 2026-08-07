@@ -1,8 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { PRICING_TIERS } from '../lib/pricing';
 
 export default function Landing() {
   const [billingPeriod, setBillingPeriod] = useState('monthly');
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/public-stats').then((r) => r.ok ? r.json() : null).then(setStats).catch(() => {});
+  }, []);
 
   return (
     <div className="wrap">
@@ -13,6 +18,11 @@ export default function Landing() {
           <a href="/signup" className="btn" style={{ textDecoration: 'none' }}>Start your agency's trial</a>
           <a href="/app" className="btn ghost" style={{ textDecoration: 'none' }}>I have an agency code</a>
         </div>
+        {stats && (stats.agencies > 0 || stats.creators > 0) && (
+          <p className="dim" style={{ marginTop: 18, fontSize: 13 }}>
+            {stats.agencies} {stats.agencies === 1 ? 'agency' : 'agencies'} · {stats.creators} creators · {stats.battles} battles scheduled and counting
+          </p>
+        )}
       </header>
 
       <div className="card">

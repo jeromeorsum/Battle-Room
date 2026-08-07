@@ -1,6 +1,8 @@
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 import { stripe } from '../../../lib/stripeAdmin';
 import { logError } from '../../../lib/logger';
+import { tierById } from '../../../lib/pricing';
+import { logAudit } from '../../../lib/auditLog';
 
 // Stripe needs the raw, unparsed request body to verify the webhook
 // signature — Next.js parses JSON by default, so we turn that off here.
@@ -52,6 +54,30 @@ export default async function handler(req, res) {
             ...(planTier ? { plan_tier: planTier } : {}),
             ...(billingPeriod ? { billing_period: billingPeriod } : {})
           }).eq('id', agencyId);
+
+          // Referral reward: if this agency was referred, and this is their
+          // FIRST time going active (not a renewal), credit the referrer a
+          // free month via Stripe's customer balance — it's automatically
+          // applied to their next invoice.
+          const { data: referredAgency } = await supabaseAdmin
+            .from('agencies').select('referred_by_code, plan_tier, billing_period').eq('id', agencyId).single();
+          if (referredAgency?.referred_by_code) {
+            const { data: referrer } = await supabaseAdmin
+              .from('agencies').select('id, stripe_customer_id, plan_tier, billing_period')
+              .eq('referral_code', referredAgency.referred_by_code).single();
+            if (referrer?.stripe_customer_id) {
+              const referrerTier = tierById(referrer.plan_tier);
+              const rewardAmount = referrer.billing_period === 'yearly' ? referrerTier.yearly : referrerTier.monthly;
+              if (rewardAmount) {
+                await stripe.customers.createBalanceTransaction(referrer.stripe_customer_id, {
+                  amount: -Math.round(rewardAmount * 100), // negative = credit, Stripe uses cents
+                  currency: 'usd',
+                  description: 'Referral reward — referred agency subscribed'
+                });
+                await logAudit(referrer.id, 'System', 'Referral reward credited', `$${rewardAmount} credit for referring a new paying agency`);
+              }
+            }
+          }
         }
         break;
       }

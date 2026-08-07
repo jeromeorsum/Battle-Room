@@ -59,5 +59,6 @@ export default async function handler(req, res) {
   }
 
   setSessionCookie(res, COOKIES.CREATOR, { creatorId: creator.id, agencyId: creator.agency_id }, 60 * 60 * 24 * 30);
+  await supabaseAdmin.from('creators').update({ last_active_at: new Date().toISOString() }).eq('id', creator.id);
   return res.status(200).json({ id: creator.id, name: creator.name });
 }

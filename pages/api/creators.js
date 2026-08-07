@@ -3,6 +3,7 @@ import { supabaseAdmin } from '../../lib/supabaseAdmin';
 import { readSession, setSessionCookie, COOKIES } from '../../lib/session';
 import { canWrite } from '../../lib/agencyStatus';
 import { resolveAgencyId } from '../../lib/agencyScope';
+import { logAudit } from '../../lib/auditLog';
 
 function requireAgencyScope(req, res) {
   const agencyId = resolveAgencyId(req);
@@ -16,7 +17,7 @@ export default async function handler(req, res) {
     if (!agencyId) return;
     const { data, error } = await supabaseAdmin
       .from('creators')
-      .select('id, name, handle, diamonds, league, tz, tags, avatar_url, gender, created_at')
+      .select('id, name, handle, diamonds, league, tz, tags, avatar_url, gender, last_active_at, created_at')
       .eq('agency_id', agencyId)
       .order('created_at', { ascending: true });
     if (error) return res.status(500).json({ error: error.message });
@@ -44,9 +45,9 @@ export default async function handler(req, res) {
     }
 
     const { data: agency, error: agencyErr } = await supabaseAdmin
-      .from('agencies').select('id, max_creators, status').eq('id', agencyId).single();
+      .from('agencies').select('id, max_creators, status, trial_ends_at').eq('id', agencyId).single();
     if (agencyErr || !agency) return res.status(404).json({ error: 'Agency not found.' });
-    if (!canWrite(agency.status)) return res.status(402).json({ error: 'This agency\u2019s subscription is inactive. Contact your agency admin.' });
+    if (!canWrite(agency.status, agency.trial_ends_at)) return res.status(402).json({ error: 'This agency\u2019s subscription is inactive. Contact your agency admin.' });
 
     const { count } = await supabaseAdmin.from('creators').select('id', { count: 'exact', head: true }).eq('agency_id', agencyId);
     if ((count || 0) >= agency.max_creators) {
@@ -68,6 +69,7 @@ export default async function handler(req, res) {
 
     // Creating a profile logs you in immediately, same as before.
     setSessionCookie(res, COOKIES.CREATOR, { creatorId: data.id, agencyId }, 60 * 60 * 24 * 30);
+    if (readSession(req, COOKIES.ADMIN)) await logAudit(agencyId, 'Agency admin', 'Added creator', data.name);
     return res.status(201).json(data);
   }
 
