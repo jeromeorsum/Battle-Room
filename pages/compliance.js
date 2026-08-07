@@ -24,7 +24,7 @@ export default function Compliance() {
       <div className="card">
         <h2>Known open items</h2>
         <ul style={{ paddingLeft: 20 }}>
-          <li className="dim">Minors: TikTok LIVE creators are often under 18. Age verification, COPPA (under 13), and state teen-privacy law compliance have not been reviewed.</li>
+          <li className="dim">Minors: this platform is now 18+ only, enforced via a required self-attestation checkbox at signup (both for creators and for agencies adding a creator). This significantly reduces COPPA/teen-privacy exposure but is self-reported, not independently verified — real ID verification would be a stronger (and more expensive) step if ever needed. Worth confirming with a lawyer whether attestation alone is sufficient for your situation.</li>
           <li className="dim">Two-tier users: creators are added by an agency and don't sign anything themselves. Whether an agency can bind them, or whether creators need their own agreement, hasn't been confirmed.</li>
           <li className="dim">Auto-renewal disclosure requirements vary by state (California and New York have specific rules) — not yet reviewed.</li>
           <li className="dim">Data deletion policy after cancellation is informal (view-only access, no automatic deletion) — may need a defined policy.</li>

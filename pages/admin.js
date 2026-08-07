@@ -18,13 +18,14 @@ export default function Admin() {
   const [auditLog, setAuditLog] = useState([]);
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [posts, setPosts] = useState([]);
-  const [filters, setFilters] = useState({ min: '', max: '', type: 'all' });
+  const [filters, setFilters] = useState({ min: '', max: '', type: 'all', search: '' });
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [presets, setPresets] = useState([]);
   const [presetName, setPresetName] = useState('');
   const [bulkTagKey, setBulkTagKey] = useState('');
   const [bookForm, setBookForm] = useState({ a: '', b: '', datetime: '', tz: 'ET', notes: '' });
   const [addForm, setAddForm] = useState({ name: '', handle: '', diamonds: 0, league: '', tz: 'ET', tags: [], pin: '' });
+  const [addAgeAttested, setAddAgeAttested] = useState(false);
   const [addError, setAddError] = useState('');
   const [billingLoading, setBillingLoading] = useState(false);
   const [pendingBilling, setPendingBilling] = useState(null); // { type: 'checkout'|'portal', planTier?, billingPeriod? }
@@ -232,12 +233,14 @@ export default function Admin() {
     setAddError('');
     if (!addForm.name || !addForm.pin) { setAddError('Nickname and a starting PIN are required.'); return; }
     if (addForm.pin.length < 6) { setAddError('PIN must be at least 6 characters.'); return; }
+    if (!addAgeAttested) { setAddError('Please confirm this creator is 18 or older.'); return; }
     const res = await fetch('/api/creators', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(addForm)
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...addForm, ageAttested: true })
     });
     const data = await res.json();
     if (!res.ok) { setAddError(data.error || 'Could not add creator.'); return; }
     setAddForm({ name: '', handle: '', diamonds: 0, league: '', tz: 'ET', tags: [], pin: '' });
+    setAddAgeAttested(false);
     loadRoster();
   }
 
@@ -273,23 +276,17 @@ export default function Admin() {
     if (!pendingBilling || !billingCode) return;
     setBillingLoading(true);
     try {
-      if (pendingBilling.type === 'checkout') {
-        const res = await fetch('/api/checkout', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ planTier: pendingBilling.planTier, billingPeriod: pendingBilling.billingPeriod, verificationCode: billingCode })
-        });
-        const data = await res.json();
-        if (!res.ok) { alert(data.error || 'Could not start checkout.'); setBillingLoading(false); return; }
-        window.location.href = data.url;
-      } else {
-        const res = await fetch('/api/create-portal-session', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ verificationCode: billingCode })
-        });
-        const data = await res.json();
-        if (!res.ok) { alert(data.error || 'Could not open billing portal.'); setBillingLoading(false); return; }
-        window.location.href = data.url;
-      }
-    } catch (e) { alert('Network error.'); setBillingLoading(false); }
+      const endpoint = pendingBilling.type === 'checkout' ? '/api/checkout' : '/api/create-portal-session';
+      const body = pendingBilling.type === 'checkout'
+        ? { planTier: pendingBilling.planTier, billingPeriod: pendingBilling.billingPeriod, verificationCode: billingCode }
+        : { verificationCode: billingCode };
+      const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      let data;
+      try { data = await res.json(); }
+      catch (parseErr) { alert('The server sent back an unexpected response. This usually means Stripe isn\u2019t connected yet — see STRIPE_SETUP.md.'); setBillingLoading(false); return; }
+      if (!res.ok) { alert(data.error || 'Could not continue.'); setBillingLoading(false); return; }
+      window.location.href = data.url;
+    } catch (e) { alert('Could not reach the server — check your internet connection and try again.'); setBillingLoading(false); }
   }
 
   function cancelBilling() { setPendingBilling(null); setBillingCodeSent(false); setBillingCode(''); setBillingLoading(false); }
@@ -355,6 +352,8 @@ export default function Admin() {
     if (filters.min !== '' && (c.diamonds || 0) < Number(filters.min)) return false;
     if (filters.max !== '' && (c.diamonds || 0) > Number(filters.max)) return false;
     if (filters.type !== 'all' && !(c.tags || []).includes(filters.type)) return false;
+    const s = (filters.search || '').trim().toLowerCase();
+    if (s && !c.name.toLowerCase().includes(s) && !(c.handle || '').toLowerCase().includes(s)) return false;
     return true;
   }).sort((a, b) => (b.diamonds || 0) - (a.diamonds || 0));
 
@@ -453,7 +452,11 @@ export default function Admin() {
               </div>
             </div>
             {addError && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{addError}</p>}
-            <button className="btn" type="submit">Add to Roster</button>
+            <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', margin: '10px 0' }}>
+              <input type="checkbox" checked={addAgeAttested} onChange={(e) => setAddAgeAttested(e.target.checked)} style={{ width: 'auto', marginTop: 3 }} />
+              <span className="dim" style={{ fontSize: 12 }}>I confirm this creator is 18 years of age or older. This platform is for adults only.</span>
+            </label>
+            <button className="btn" type="submit" disabled={!addAgeAttested}>Add to Roster</button>
           </form>
 
           <div className="card">
@@ -462,6 +465,7 @@ export default function Admin() {
               <button className="btn ghost" style={{ fontSize: 12 }} onClick={exportRosterCSV} disabled={creators.length === 0}>⬇ Export as CSV</button>
             </div>
             <div className="row" style={{ marginBottom: 10, marginTop: 10 }}>
+              <div className="field" style={{ flex: 1 }}><label>Search by name or handle</label><input value={filters.search || ''} onChange={(e) => setFilters({ ...filters, search: e.target.value })} placeholder="Search…" /></div>
               <div className="field"><label>Min diamonds</label><DiamondInput value={filters.min === '' ? 0 : Number(filters.min)} onChange={(v) => setFilters({ ...filters, min: v })} /></div>
               <div className="field"><label>Max diamonds</label><DiamondInput value={filters.max === '' ? 0 : Number(filters.max)} onChange={(v) => setFilters({ ...filters, max: v })} /></div>
               <div className="field"><label>Battle type</label>
@@ -472,6 +476,9 @@ export default function Admin() {
               </div>
             </div>
 
+            <p className="dim" style={{ fontSize: 12, marginTop: -4, marginBottom: 8 }}>
+              Save your current diamond/league/type filters under a name, then re-apply them with one click any time — handy if you regularly check the same slice of your roster (e.g., "B-league, Toxic, 20k+").
+            </p>
             <div className="row" style={{ marginBottom: 14, alignItems: 'center' }}>
               <input value={presetName} onChange={(e) => setPresetName(e.target.value)} placeholder="Name this filter combo…" style={{ maxWidth: 200 }} />
               <button className="btn ghost" style={{ fontSize: 12 }} onClick={savePreset}>Save as preset</button>
@@ -586,7 +593,7 @@ export default function Admin() {
                   <p className="dim">Sending you a verification code…</p>
                 ) : (
                   <>
-                    <p className="dim">Enter the 6-digit code we emailed to your contact address to continue.</p>
+                    <p className="dim">We sent a 6-digit code to your contact email — check your inbox and enter it below.</p>
                     <div className="field" style={{ maxWidth: 200 }}>
                       <input value={billingCode} onChange={(e) => setBillingCode(e.target.value)} placeholder="123456" maxLength={6} />
                     </div>

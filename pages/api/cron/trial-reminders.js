@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 import { sendEmail } from '../../../lib/emailAdmin';
 import { logError } from '../../../lib/logger';
+import { tierForCreatorCount } from '../../../lib/pricing';
 
 // Vercel Cron sends this header automatically; anyone else calling this
 // route without it (or without knowing CRON_SECRET) gets rejected — this
@@ -21,10 +22,27 @@ export default async function handler(req, res) {
     .eq('status', 'trialing');
 
   let sent = 0;
+  let tierAssigned = 0;
   for (const agency of trialing || []) {
-    if (!agency.trial_ends_at || !agency.contact_email) continue;
+    if (!agency.trial_ends_at) continue;
     const daysLeft = Math.ceil((new Date(agency.trial_ends_at) - now) / (24 * 60 * 60 * 1000));
 
+    // Trial has actually expired — auto-assign the plan tier that actually
+    // fits their current roster, so whenever they do subscribe, checkout
+    // reflects real usage instead of whatever they guessed at signup. This
+    // does NOT charge them (no card is on file yet) — it just sets the
+    // right tier waiting for them in Settings.
+    if (daysLeft <= 0) {
+      const { count } = await supabaseAdmin.from('creators').select('id', { count: 'exact', head: true }).eq('agency_id', agency.id);
+      const correctTier = tierForCreatorCount(count || 0);
+      const { data: current } = await supabaseAdmin.from('agencies').select('plan_tier').eq('id', agency.id).single();
+      if (current && current.plan_tier !== correctTier.id) {
+        await supabaseAdmin.from('agencies').update({ plan_tier: correctTier.id, max_creators: correctTier.maxCreators || 100000 }).eq('id', agency.id);
+        tierAssigned++;
+      }
+    }
+
+    if (!agency.contact_email) continue;
     try {
       if (daysLeft <= 7 && daysLeft > 1 && !agency.trial_reminder_7_sent) {
         await sendEmail({
@@ -48,5 +66,5 @@ export default async function handler(req, res) {
     }
   }
 
-  return res.status(200).json({ checked: trialing?.length || 0, sent });
+  return res.status(200).json({ checked: trialing?.length || 0, sent, tierAssigned });
 }

@@ -25,9 +25,10 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { name, handle, diamonds, league, tz, tags, pin, gender, agencyCode } = req.body;
+    const { name, handle, diamonds, league, tz, tags, pin, gender, agencyCode, ageAttested } = req.body;
     if (!name || !pin) return res.status(400).json({ error: 'Name and PIN are required.' });
     if (String(pin).length < 6) return res.status(400).json({ error: 'PIN must be at least 6 characters.' });
+    if (!ageAttested) return res.status(400).json({ error: 'You must confirm you are 18 or older to create an account on this platform.' });
 
     // Creating an account is the one action where we deliberately don't
     // trust any cookie — we re-verify the actual agency code against the
@@ -55,13 +56,31 @@ export default async function handler(req, res) {
     }
 
     const cleanHandle = handle ? handle.trim().replace(/^@+/, '') : null;
+    const adminSession = readSession(req, COOKIES.ADMIN);
+
+    if (cleanHandle) {
+      const normalized_handle = cleanHandle.toLowerCase();
+      const { data: blocked } = await supabaseAdmin
+        .from('removed_creators').select('normalized_handle').eq('agency_id', agencyId).eq('normalized_handle', normalized_handle).single();
+      if (blocked) {
+        if (adminSession && adminSession.agencyId === agencyId && adminSession.role === 'admin') {
+          // An admin explicitly re-adding this handle is the intended way
+          // to lift the block — clear it and let this go through.
+          await supabaseAdmin.from('removed_creators').delete().eq('agency_id', agencyId).eq('normalized_handle', normalized_handle);
+        } else {
+          return res.status(403).json({ error: 'This TikTok handle was removed from this agency. Ask your agency admin to re-add you.' });
+        }
+      }
+    }
+
     const pin_hash = await bcrypt.hash(String(pin), 12);
     const { data, error } = await supabaseAdmin
       .from('creators')
       .insert({
         agency_id: agencyId, name, handle: cleanHandle,
         diamonds: diamonds || 0, league: league || null, tz: tz || 'ET',
-        tags: tags || [], gender: gender || null, pin_hash
+        tags: tags || [], gender: gender || null, pin_hash,
+        age_attested: true, age_attested_at: new Date().toISOString()
       })
       .select('id, name, handle, diamonds, league, tz, tags, avatar_url, gender')
       .single();

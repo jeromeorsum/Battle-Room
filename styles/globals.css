@@ -13,6 +13,12 @@
   a { color: black !important; text-decoration: none !important; }
 }
 * { box-sizing: border-box; }
+
+/* Remove spinner arrows from all number inputs — the DiamondInput dropdown
+   is the intended way to adjust these, not clicking tiny up/down arrows. */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: -apple-system, Inter, sans-serif; }
 .wrap { max-width: 880px; margin: 0 auto; padding: 24px 16px 60px; }
 h1 { font-size: 32px; margin: 0 0 4px; }

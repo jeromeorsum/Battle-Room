@@ -59,9 +59,13 @@ export default async function handler(req, res) {
 
   if (req.method === 'DELETE') {
     if (!isAgencyAdmin) return res.status(403).json({ error: 'Only an admin can remove a creator — managers can\u2019t.' });
-    const { data: victim } = await supabaseAdmin.from('creators').select('name').eq('id', id).single();
+    const { data: victim } = await supabaseAdmin.from('creators').select('name, handle').eq('id', id).single();
     const { error } = await supabaseAdmin.from('creators').delete().eq('id', id);
     if (error) return res.status(500).json({ error: error.message });
+    if (victim?.handle) {
+      const normalized_handle = victim.handle.trim().toLowerCase().replace(/^@+/, '');
+      await supabaseAdmin.from('removed_creators').upsert({ agency_id: creator.agency_id, normalized_handle });
+    }
     await logAudit(creator.agency_id, 'Agency admin', 'Removed creator', victim?.name);
     return res.status(204).end();
   }

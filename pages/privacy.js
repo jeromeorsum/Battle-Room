@@ -15,7 +15,7 @@ export default function Privacy() {
         <p>Data is processed through Supabase (database and file storage), Vercel (hosting), Stripe (payment processing, once connected), and Resend (email, for account recovery). Each of these has its own privacy practices.</p>
 
         <h3>Minors</h3>
-        <p>TikTok LIVE creators are sometimes under 18. Agencies are responsible for ensuring appropriate consent and compliance with applicable children's privacy laws for any creator they add to the platform.</p>
+        <p>This platform is intended for adults only. Everyone who creates an account — agency admins, managers, and creators — must confirm they are 18 years of age or older before an account can be created. This is a self-reported confirmation, not independently verified.</p>
 
         <h3>Data retention</h3>
         <p>If an agency's subscription is canceled, existing data remains viewable but no new data can be added. Contact us if you'd like your agency's data deleted entirely.</p>

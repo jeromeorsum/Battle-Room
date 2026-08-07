@@ -164,8 +164,7 @@ export default function Home() {
       <div className="tabs">
         <button className={step === 'profile' ? 'active' : ''} onClick={() => setStep('profile')}>1 · Profile</button>
         <button className={step === 'opponents' ? 'active' : ''} disabled={!me} onClick={() => setStep('opponents')}>2 · Find Opponent</button>
-        <button className={step === 'board' ? 'active' : ''} disabled={!me} onClick={() => setStep('board')}>3 · Find a Battle</button>
-        <button className={step === 'battles' ? 'active' : ''} disabled={!me} onClick={() => setStep('battles')}>4 · Your Battles</button>
+        <button className={step === 'battles' ? 'active' : ''} disabled={!me} onClick={() => setStep('battles')}>3 · Your Battles</button>
       </div>
 
       {me && <PushReminder />}
@@ -181,9 +180,8 @@ export default function Home() {
       {step === 'opponents' && me && (
         <OpponentsStep me={me} creators={creators} onPropose={() => setStep('battles')} />
       )}
-      {step === 'board' && me && <BoardStep me={me} />}
       {step === 'battles' && me && (
-        <BattlesStep me={me} creators={creators} battles={battles} onChange={refresh} onFindOpponent={() => setStep('opponents')} onFindBattle={() => setStep('board')} />
+        <BattlesStep me={me} creators={creators} battles={battles} onChange={refresh} onFindOpponent={() => setStep('opponents')} />
       )}
     </div>
   );
@@ -401,6 +399,7 @@ function LoggedOutView({ creators, agencyId, onCreate, onLogin }) {
   const [signInError, setSignInError] = useState('');
   const [createForm, setCreateForm] = useState({ name: '', handle: '', diamonds: 0, league: '', tz: 'ET', tags: [], gender: '', pin: '' });
   const [pendingAvatarFile, setPendingAvatarFile] = useState(null);
+  const [ageAttested, setAgeAttested] = useState(false);
 
   function toggleTag(key) {
     setCreateForm((f) => ({ ...f, tags: f.tags.includes(key) ? f.tags.filter((t) => t !== key) : [...f.tags, key] }));
@@ -443,7 +442,7 @@ function LoggedOutView({ creators, agencyId, onCreate, onLogin }) {
         </a>
       </div>
       <p className="dim" style={{ marginTop: 6 }}>Once you create your profile, this browser will remember you for 30 days.</p>
-      <form onKeyDown={focusNext} onSubmit={(e) => { e.preventDefault(); if (!createForm.name || !createForm.pin) { alert('Nickname and PIN are required.'); return; } onCreate(createForm, pendingAvatarFile); }}>
+      <form onKeyDown={focusNext} onSubmit={(e) => { e.preventDefault(); if (!createForm.name || !createForm.pin) { alert('Nickname and PIN are required.'); return; } if (!ageAttested) { alert('Please confirm you are 18 or older to continue.'); return; } onCreate({ ...createForm, ageAttested }, pendingAvatarFile); }}>
         <div className="field">
           <label>Profile picture (optional)</label>
           <div className="row" style={{ alignItems: 'center' }}>
@@ -497,7 +496,11 @@ function LoggedOutView({ creators, agencyId, onCreate, onLogin }) {
         <div className="field"><label>Set a PIN (6+ characters)</label>
           <PasswordField value={createForm.pin} onChange={(e) => setCreateForm({ ...createForm, pin: e.target.value })} minLength={6} placeholder="Choose a PIN" />
         </div>
-        <button className="btn" type="submit">Create Profile &amp; Continue</button>
+        <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', margin: '10px 0' }}>
+          <input type="checkbox" checked={ageAttested} onChange={(e) => setAgeAttested(e.target.checked)} style={{ width: 'auto', marginTop: 3 }} />
+          <span className="dim" style={{ fontSize: 12 }}>I confirm I am 18 years of age or older. This platform is for adults only.</span>
+        </label>
+        <button className="btn" type="submit" disabled={!ageAttested}>Create Profile &amp; Continue</button>
       </form>
     </div>
   );
@@ -723,7 +726,7 @@ function exportBattlesCSV(battles, nameOf) {
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
-function BattlesStep({ me, creators, battles, onChange, onFindOpponent, onFindBattle }) {
+function BattlesStep({ me, creators, battles, onChange, onFindOpponent }) {
   const [form, setForm] = useState({ opponent: '', datetime: '', tz: me.tz, notes: '' });
   const nameOf = (id) => creators.find((c) => c.id === id)?.name || 'Unknown';
   const handleOf = (id) => creators.find((c) => c.id === id)?.handle || '';
@@ -738,6 +741,9 @@ function BattlesStep({ me, creators, battles, onChange, onFindOpponent, onFindBa
   const needsResponse = mine.filter((b) => !b.declined && ((b.creator_a === me.id && !b.accepted_a) || (b.creator_b === me.id && !b.accepted_b)));
   const waiting = mine.filter((b) => !b.declined && !needsResponse.includes(b) && !(b.accepted_a && b.accepted_b));
   const confirmed = mine.filter((b) => !b.declined && b.accepted_a && b.accepted_b);
+  const now = new Date();
+  const upcomingConfirmed = confirmed.filter((b) => new Date(b.datetime_utc) >= now).sort((a, b) => new Date(a.datetime_utc) - new Date(b.datetime_utc));
+  const pastConfirmed = confirmed.filter((b) => new Date(b.datetime_utc) < now).sort((a, b) => new Date(b.datetime_utc) - new Date(a.datetime_utc));
 
   async function sendInvite(e) {
     if (e) e.preventDefault();
@@ -799,7 +805,6 @@ function BattlesStep({ me, creators, battles, onChange, onFindOpponent, onFindBa
         <div className="field"><label>Date &amp; Time (your local time)</label>
           <DateTimePicker value={form.datetime} onChange={(v) => setForm({ ...form, datetime: v })} />
         </div>
-        <div className="field"><label>Notes</label><input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
         <button className="btn" type="submit">Send Invite</button>
       </form>
 
@@ -820,23 +825,22 @@ function BattlesStep({ me, creators, battles, onChange, onFindOpponent, onFindBa
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
         <h3 style={{ margin: 0 }}>Your Calendar</h3>
-        {confirmed.length > 0 && (
+        {upcomingConfirmed.length > 0 && (
           <div className="row">
             <button className="btn ghost" style={{ fontSize: 12 }} onClick={() => window.print()}>🖨️ Print</button>
-            <button className="btn ghost" style={{ fontSize: 12 }} onClick={() => exportBattlesCSV(confirmed, nameOf)}>⬇ Export CSV</button>
+            <button className="btn ghost" style={{ fontSize: 12 }} onClick={() => exportBattlesCSV(upcomingConfirmed, nameOf)}>⬇ Export CSV</button>
           </div>
         )}
       </div>
-      {confirmed.length === 0 && (
+      {upcomingConfirmed.length === 0 && (
         <div className="empty" style={{ border: '1px dashed var(--line)', borderRadius: 12, padding: '20px', textAlign: 'center' }}>
-          <p className="dim" style={{ margin: 0 }}>No confirmed battles yet.</p>
+          <p className="dim" style={{ margin: 0 }}>No upcoming battles yet.</p>
           <div className="row" style={{ justifyContent: 'center', marginTop: 10 }}>
             <button className="btn ghost" onClick={onFindOpponent}>Find an Opponent</button>
-            <button className="btn ghost" onClick={onFindBattle}>Post on the Board</button>
           </div>
         </div>
       )}
-      {confirmed.map((b) => (
+      {upcomingConfirmed.map((b) => (
         <div key={b.id} className="vs">
           <div className="side">{nameOf(b.creator_a)}<br /><a className="dim" href={tiktokUrl(handleOf(b.creator_a))} target="_blank" rel="noopener noreferrer">TikTok ↗</a></div>
           <div className="mid">VS</div>
@@ -860,6 +864,22 @@ function BattlesStep({ me, creators, battles, onChange, onFindOpponent, onFindBa
           </div>
         </div>
       ))}
+
+      {pastConfirmed.length > 0 && (
+        <>
+          <h3 style={{ marginTop: 24 }}>Past Battles</h3>
+          {pastConfirmed.map((b) => (
+            <div key={b.id} className="vs" style={{ opacity: 0.75 }}>
+              <div className="side">{nameOf(b.creator_a)}</div>
+              <div className="mid">VS</div>
+              <div className="side b">{nameOf(b.creator_b)}</div>
+              <div className="vs-actions">
+                <div className="dim">{new Date(b.datetime_utc).toLocaleString()}</div>
+              </div>
+            </div>
+          ))}
+        </>
+      )}
     </div>
   );
 }

@@ -15,6 +15,13 @@ export default async function handler(req, res) {
   const match = dataUrl.match(/^data:image\/(\w+);base64,(.+)$/);
   if (!match) return res.status(400).json({ error: 'Invalid image format.' });
   const [, ext, base64] = match;
+  // HEIC/HEIF (the default format for iPhone camera photos) uploads fine
+  // but most browsers can't actually display it in an <img> tag — this
+  // caused the "I uploaded a photo but it just shows my initials" bug.
+  // Reject it early with a clear message instead of failing silently.
+  if (/^hei[cf]$/i.test(ext)) {
+    return res.status(400).json({ error: 'HEIC photos aren\u2019t supported yet. On iPhone: Settings → Camera → Formats → choose "Most Compatible" to save photos as JPEG instead, or take a screenshot of the photo and upload that.' });
+  }
   const buffer = Buffer.from(base64, 'base64');
   if (buffer.length > 3 * 1024 * 1024) return res.status(400).json({ error: 'Image must be under 3MB.' });
 

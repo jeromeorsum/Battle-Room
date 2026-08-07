@@ -12,7 +12,18 @@ export default function SuperAdmin() {
   const [search, setSearch] = useState('');
   const [openRoster, setOpenRoster] = useState(null); // agencyId currently expanded
   const [rosterCreators, setRosterCreators] = useState([]);
+  const [rosterSearch, setRosterSearch] = useState('');
   const [rosterLoading, setRosterLoading] = useState(false);
+  const [superTab, setSuperTab] = useState('agencies'); // agencies | new-info
+  const [newInfo, setNewInfo] = useState({ agencies: [], creators: [] });
+  const [newInfoLoading, setNewInfoLoading] = useState(false);
+
+  async function loadNewInfo() {
+    setNewInfoLoading(true);
+    const res = await fetch('/api/super-admin/new-info');
+    if (res.ok) setNewInfo(await res.json());
+    setNewInfoLoading(false);
+  }
 
   async function toggleRoster(agencyId) {
     if (openRoster === agencyId) { setOpenRoster(null); return; }
@@ -95,7 +106,7 @@ export default function SuperAdmin() {
   const STATUS_COLOR = { trialing: 'var(--gold)', active: 'var(--green)', past_due: 'var(--pink)', canceled: 'var(--text-dim)' };
   const q = search.trim().toLowerCase();
   const filteredAgencies = q
-    ? agencies.filter((a) => a.name.toLowerCase().startsWith(q) || a.agency_code.toLowerCase().startsWith(q))
+    ? agencies.filter((a) => a.name.toLowerCase().startsWith(q))
     : agencies;
 
   return (
@@ -104,9 +115,48 @@ export default function SuperAdmin() {
         <h1>Super Admin — All Agencies</h1>
         <button className="btn ghost" onClick={logout}>Log out</button>
       </header>
+
+      <div className="tabs">
+        <button className={superTab === 'agencies' ? 'active' : ''} onClick={() => setSuperTab('agencies')}>Agencies</button>
+        <button className={superTab === 'new-info' ? 'active' : ''} onClick={() => { setSuperTab('new-info'); if (newInfo.agencies.length === 0) loadNewInfo(); }}>New Info</button>
+      </div>
+
+      {superTab === 'new-info' && (
+        <div>
+          <p className="dim">Recent signups across the platform. Agencies flagged in pink share a signup IP address with another recent agency — a possible sign of the same person creating multiple accounts to get another free trial. Shared office wifi can also cause this, so treat it as a prompt to look closer, not proof on its own.</p>
+          {newInfoLoading ? <SkeletonList count={3} /> : (
+            <>
+              <div className="card">
+                <h2>Recent Agencies</h2>
+                {newInfo.agencies.length === 0 ? <p className="dim">Nothing yet.</p> : newInfo.agencies.map((a) => (
+                  <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--line)' }}>
+                    <div>
+                      <b>{a.name}</b> <span className="dim">{a.contact_email}</span>
+                      {a.flagged && <span className="badge" style={{ marginLeft: 8, borderColor: 'var(--pink)', color: 'var(--pink)' }}>⚠ Shared signup IP</span>}
+                    </div>
+                    <span className="dim" style={{ fontSize: 12 }}>{new Date(a.created_at).toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="card">
+                <h2>Recent Creators</h2>
+                {newInfo.creators.length === 0 ? <p className="dim">Nothing yet.</p> : newInfo.creators.map((c) => (
+                  <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--line)' }}>
+                    <div><b>{c.name}</b> <span className="dim">{c.handle}</span></div>
+                    <span className="dim" style={{ fontSize: 12 }}>{new Date(c.created_at).toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {superTab === 'agencies' && (
+      <>
       <div className="field" style={{ maxWidth: 320 }}>
-        <label>Search agencies</label>
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or agency code…" />
+        <label>Search agencies by name</label>
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name…" />
       </div>
       <p className="dim">{filteredAgencies.length} of {agencies.length} agencies</p>
       {filteredAgencies.map((a) => {
@@ -156,21 +206,28 @@ export default function SuperAdmin() {
             </div>
             {openRoster === a.id && (
               <div style={{ marginTop: 12, borderTop: '1px solid var(--line)', paddingTop: 12 }}>
-                {rosterLoading ? <SkeletonList count={2} /> : rosterCreators.length === 0 ? <p className="dim">No creators yet.</p> : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {rosterCreators.map((c) => (
-                      <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-raised)', border: '1px solid var(--line)', borderRadius: 8, padding: '8px 12px' }}>
-                        <span>{c.name} <span className="dim">{c.handle}</span></span>
-                        <button className="btn ghost" style={{ fontSize: 11, padding: '4px 10px' }} onClick={() => resetCreatorPin(c.id, c.name)}>Reset PIN</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <input value={rosterSearch} onChange={(e) => setRosterSearch(e.target.value)} placeholder="Search creators…" style={{ marginBottom: 10, maxWidth: 240 }} />
+                {rosterLoading ? <SkeletonList count={2} /> : (() => {
+                  const rq = rosterSearch.trim().toLowerCase();
+                  const rFiltered = rq ? rosterCreators.filter((c) => c.name.toLowerCase().includes(rq) || (c.handle || '').toLowerCase().includes(rq)) : rosterCreators;
+                  return rFiltered.length === 0 ? <p className="dim">No creators match.</p> : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {rFiltered.map((c) => (
+                        <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-raised)', border: '1px solid var(--line)', borderRadius: 8, padding: '8px 12px' }}>
+                          <span>{c.name} <span className="dim">{c.handle}</span></span>
+                          <button className="btn ghost" style={{ fontSize: 11, padding: '4px 10px' }} onClick={() => resetCreatorPin(c.id, c.name)}>Reset PIN</button>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>
         );
       })}
+      </>
+      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import PasswordField from '../components/PasswordField';
 export default function Signup() {
   const [billingPeriod, setBillingPeriod] = useState('monthly');
   const [form, setForm] = useState({ name: '', adminCode: '', managerCode: '', planTier: 'starter', contactEmail: '', contactPhone: '', referralCode: '' });
+  const [ageAttested, setAgeAttested] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
@@ -15,10 +16,11 @@ export default function Signup() {
     setError('');
     if (!form.name || !form.adminCode) { setError('Agency name and an admin code are required.'); return; }
     if (!form.contactEmail || !form.contactPhone) { setError('Contact email and phone are both required.'); return; }
+    if (!ageAttested) { setError('Please confirm you are 18 or older to continue.'); return; }
     try {
       const res = await fetch('/api/agencies', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, billingPeriod })
+        body: JSON.stringify({ ...form, billingPeriod, ageAttested })
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Signup failed.'); return; }
@@ -118,8 +120,12 @@ export default function Signup() {
           </select>
         </div>
 
+        <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', margin: '10px 0' }}>
+          <input type="checkbox" checked={ageAttested} onChange={(e) => setAgeAttested(e.target.checked)} style={{ width: 'auto', marginTop: 3 }} />
+          <span className="dim" style={{ fontSize: 12 }}>I confirm I am 18 years of age or older. This platform is for adults only.</span>
+        </label>
         {error && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{error}</p>}
-        <button className="btn" type="submit">Create Agency</button>
+        <button className="btn" type="submit" disabled={!ageAttested}>Create Agency</button>
         <p className="dim" style={{ marginTop: 10 }}>This starts a 14-day free trial. One trial per email address.</p>
       </form>
     </div>
