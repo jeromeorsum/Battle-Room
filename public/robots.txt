@@ -1,0 +1,10 @@
+User-agent: *
+Disallow: /admin
+Disallow: /super-admin
+Disallow: /api/
+Disallow: /app
+Disallow: /reset-admin-code
+Disallow: /reset-password
+Disallow: /accept-invite
+
+Sitemap: https://battle-room.vercel.app/sitemap.xml

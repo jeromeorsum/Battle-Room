@@ -1,4 +1,5 @@
 import { Component, useEffect, useState } from 'react';
+import Head from 'next/head';
 import * as Sentry from '@sentry/nextjs';
 import '../styles/globals.css';
 import NavMenu from '../components/NavMenu';
@@ -47,6 +48,9 @@ export default function App({ Component, pageProps }) {
 
   return (
     <>
+      <Head>
+        <title>Battle Room — TikTok Creator Battles for Agencies</title>
+      </Head>
       <NavMenu />
       <ErrorBoundary>
         <Component {...pageProps} />

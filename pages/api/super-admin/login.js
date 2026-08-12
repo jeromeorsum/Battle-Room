@@ -1,5 +1,6 @@
 import { setSessionCookie, COOKIES } from '../../../lib/session';
 import { checkLock, recordFailure, recordSuccess } from '../../../lib/rateLimit';
+import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') { res.setHeader('Allow', ['POST']); return res.status(405).end(); }
@@ -19,6 +20,15 @@ export default async function handler(req, res) {
   if (!match) { await recordFailure(identifier); return res.status(401).json({ error: 'Incorrect code.' }); }
 
   await recordSuccess(identifier);
+
+  const { data: settings } = await supabaseAdmin.from('super_admin_2fa').select('totp_enabled').eq('id', 'singleton').single();
+  if (settings?.totp_enabled) {
+    // Code checked out, but 2FA is required — short-lived pending token,
+    // no real session yet until the TOTP code is also verified.
+    setSessionCookie(res, COOKIES.SUPERADMIN_PENDING_2FA, { role: 'superadmin' }, 60 * 5);
+    return res.status(200).json({ requires2fa: true });
+  }
+
   // Very short-lived (2 hours) since this is the most privileged role on the platform.
   setSessionCookie(res, COOKIES.SUPERADMIN, { role: 'superadmin' }, 60 * 60 * 2);
   return res.status(200).json({ ok: true });

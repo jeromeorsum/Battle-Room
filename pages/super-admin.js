@@ -14,9 +14,22 @@ export default function SuperAdmin() {
   const [rosterCreators, setRosterCreators] = useState([]);
   const [rosterSearch, setRosterSearch] = useState('');
   const [rosterLoading, setRosterLoading] = useState(false);
-  const [superTab, setSuperTab] = useState('agencies'); // agencies | new-info
+  const [superTab, setSuperTab] = useState('agencies'); // agencies | new-info | security
   const [newInfo, setNewInfo] = useState({ agencies: [], creators: [] });
   const [newInfoLoading, setNewInfoLoading] = useState(false);
+
+  const [needs2fa, setNeeds2fa] = useState(false);
+  const [twoFaCode, setTwoFaCode] = useState('');
+  const [twoFaEnabled, setTwoFaEnabled] = useState(false);
+  const [my2fa, setMy2fa] = useState(null); // { qrDataUrl } while setting up
+  const [twoFaConfirmCode, setTwoFaConfirmCode] = useState('');
+  const [twoFaMsg, setTwoFaMsg] = useState('');
+  const [disable2faCode, setDisable2faCode] = useState('');
+
+  async function load2faStatus() {
+    const res = await fetch('/api/super-admin/2fa-status');
+    if (res.ok) { const d = await res.json(); setTwoFaEnabled(d.enabled); }
+  }
 
   async function loadNewInfo() {
     setNewInfoLoading(true);
@@ -60,7 +73,47 @@ export default function SuperAdmin() {
     const data = await res.json();
     if (!res.ok) { setError(data.error || 'Login failed.'); return; }
     setCode('');
+    if (data.requires2fa) { setNeeds2fa(true); return; }
     checkSession();
+  }
+
+  async function submit2fa(e) {
+    if (e) e.preventDefault();
+    setError('');
+    const res = await fetch('/api/super-admin/verify-2fa', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: twoFaCode })
+    });
+    const data = await res.json();
+    if (!res.ok) { setError(data.error || 'Incorrect code.'); return; }
+    setNeeds2fa(false); setTwoFaCode('');
+    checkSession();
+  }
+
+  async function start2faSetup() {
+    setTwoFaMsg('');
+    const res = await fetch('/api/super-admin/2fa-setup', { method: 'POST' });
+    const data = await res.json();
+    if (res.ok) setMy2fa(data); else setTwoFaMsg(data.error || 'Could not start 2FA setup.');
+  }
+
+  async function confirm2faSetup() {
+    setTwoFaMsg('');
+    const res = await fetch('/api/super-admin/2fa-confirm', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: twoFaConfirmCode })
+    });
+    const data = await res.json();
+    if (!res.ok) { setTwoFaMsg(data.error || 'Incorrect code.'); return; }
+    setMy2fa(null); setTwoFaConfirmCode(''); setTwoFaMsg('Two-factor authentication is now on.'); setTwoFaEnabled(true);
+  }
+
+  async function disable2fa() {
+    setTwoFaMsg('');
+    const res = await fetch('/api/super-admin/2fa-disable', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: disable2faCode })
+    });
+    const data = await res.json();
+    if (!res.ok) { setTwoFaMsg(data.error || 'Could not disable 2FA.'); return; }
+    setDisable2faCode(''); setTwoFaMsg('Two-factor authentication turned off.'); setTwoFaEnabled(false);
   }
 
   async function logout() {
@@ -89,6 +142,19 @@ export default function SuperAdmin() {
   if (loading) return <div className="wrap"><SkeletonList count={3} /></div>;
 
   if (!unlocked) {
+    if (needs2fa) {
+      return (
+        <div className="wrap">
+          <form className="card" style={{ maxWidth: 360, margin: '60px auto' }} onSubmit={submit2fa}>
+            <h2>Two-Factor Code</h2>
+            <p className="dim">Enter the 6-digit code from your authenticator app.</p>
+            <input value={twoFaCode} onChange={(e) => setTwoFaCode(e.target.value)} placeholder="123456" maxLength={6} autoFocus />
+            {error && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{error}</p>}
+            <button className="btn" type="submit" style={{ marginTop: 10 }} disabled={twoFaCode.length !== 6}>Verify</button>
+          </form>
+        </div>
+      );
+    }
     return (
       <div className="wrap">
         <form className="card" style={{ maxWidth: 360, margin: '60px auto' }} onSubmit={submitLogin}>
@@ -119,7 +185,40 @@ export default function SuperAdmin() {
       <div className="tabs">
         <button className={superTab === 'agencies' ? 'active' : ''} onClick={() => setSuperTab('agencies')}>Agencies</button>
         <button className={superTab === 'new-info' ? 'active' : ''} onClick={() => { setSuperTab('new-info'); if (newInfo.agencies.length === 0) loadNewInfo(); }}>New Info</button>
+        <button className={superTab === 'security' ? 'active' : ''} onClick={() => { setSuperTab('security'); load2faStatus(); }}>Security</button>
       </div>
+
+      {superTab === 'security' && (
+        <div className="card">
+          <h2>Two-Factor Authentication</h2>
+          <p className="dim">Adds a second step to the super admin login, on top of the shared code — this account can see and modify every agency on the platform, so it's worth the extra protection.</p>
+          {twoFaEnabled && !my2fa ? (
+            <div style={{ marginTop: 10 }}>
+              <p style={{ color: 'var(--green)' }}>✅ Two-factor authentication is currently ON.</p>
+              <div className="field" style={{ maxWidth: 260 }}>
+                <label>Super admin code (to turn off)</label>
+                <PasswordField value={disable2faCode} onChange={(e) => setDisable2faCode(e.target.value)} />
+              </div>
+              <button className="btn ghost" onClick={disable2fa} disabled={!disable2faCode}>Turn Off Two-Factor</button>
+            </div>
+          ) : my2fa ? (
+            <div style={{ marginTop: 10 }}>
+              <p className="dim">Scan this in your authenticator app, then enter the code it shows.</p>
+              <img src={my2fa.qrDataUrl} alt="2FA QR code" style={{ width: 180, height: 180, background: '#fff', padding: 6, borderRadius: 8 }} />
+              <div className="field" style={{ maxWidth: 200, marginTop: 8 }}>
+                <input value={twoFaConfirmCode} onChange={(e) => setTwoFaConfirmCode(e.target.value)} placeholder="123456" maxLength={6} />
+              </div>
+              <button className="btn" disabled={twoFaConfirmCode.length !== 6} onClick={confirm2faSetup}>Confirm &amp; Enable</button>
+            </div>
+          ) : (
+            <div style={{ marginTop: 10 }}>
+              <p style={{ color: 'var(--text-dim)' }}>Two-factor authentication is currently OFF.</p>
+              <button className="btn" onClick={start2faSetup}>Turn On Two-Factor Authentication</button>
+            </div>
+          )}
+          {twoFaMsg && <p className="dim" style={{ fontSize: 12, marginTop: 8 }}>{twoFaMsg}</p>}
+        </div>
+      )}
 
       {superTab === 'new-info' && (
         <div>
