@@ -3,15 +3,36 @@ import { supabaseAdmin } from '../../lib/supabaseAdmin';
 import { generateAgencyCode } from '../../lib/codes';
 import { tierById } from '../../lib/pricing';
 import { normalizeEmailForTrialCheck } from '../../lib/emailNormalize';
+import { createAuthToken } from '../../lib/authTokens';
+import { sendEmail } from '../../lib/emailAdmin';
+import { logError } from '../../lib/logger';
 
 const TRIAL_DAYS = 14;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') { res.setHeader('Allow', ['POST']); return res.status(405).end(); }
 
-  const { name, adminCode, managerCode, planTier, billingPeriod, contactEmail, contactPhone, referralCode, ageAttested } = req.body;
+  const { name, adminCode, managerCode, planTier, billingPeriod, contactEmail, contactPhone, referralCode, ageAttested, turnstileToken } = req.body;
   if (!name || !adminCode) return res.status(400).json({ error: 'Agency name and admin code are required.' });
   if (!ageAttested) return res.status(400).json({ error: 'You must confirm you are 18 or older to create an agency on this platform.' });
+
+  // Bot protection — only enforced once TURNSTILE_SECRET_KEY is actually
+  // configured, so signup isn't broken before that's set up. Once it's
+  // set, a missing/invalid token fails closed.
+  if (process.env.TURNSTILE_SECRET_KEY) {
+    if (!turnstileToken) return res.status(400).json({ error: 'Please complete the verification check.' });
+    try {
+      const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ secret: process.env.TURNSTILE_SECRET_KEY, response: turnstileToken })
+      });
+      const verifyData = await verifyRes.json();
+      if (!verifyData.success) return res.status(400).json({ error: 'Verification check failed — please try again.' });
+    } catch (err) {
+      return res.status(400).json({ error: 'Could not complete verification — please try again.' });
+    }
+  }
   if (String(adminCode).length < 8) return res.status(400).json({ error: 'Admin code must be at least 8 characters — this protects your whole roster.' });
   if (managerCode && String(managerCode).length < 8) return res.status(400).json({ error: 'Manager code must be at least 8 characters too.' });
   if (!contactEmail || !contactPhone) return res.status(400).json({ error: 'Contact email and phone are both required.' });
@@ -88,6 +109,24 @@ export default async function handler(req, res) {
 
   await supabaseAdmin.from('trial_signups').insert({ normalized_email: normalizedEmail });
   await supabaseAdmin.from('trial_signups_phone').insert({ normalized_phone: normalizedPhone });
+
+  // Verify the contact email is real and reachable — it's what receives
+  // billing codes, password resets, and invites, so an unverified/typo'd
+  // address quietly breaks account recovery down the line. This doesn't
+  // block signup or the trial itself, just flags the address as confirmed.
+  try {
+    const token = await createAuthToken({ type: 'email_verify', agencyId: data.id, email: contactEmail });
+    const origin = req.headers.origin || `https://${req.headers.host}`;
+    await sendEmail({
+      to: contactEmail,
+      subject: `Confirm your email for ${data.name}`,
+      html: `<p>Welcome to Battle Room! Please confirm this is your real contact email — it's what you'll use for billing codes, password resets, and invites.</p>
+             <p><a href="${origin}/verify-email?token=${token}">Confirm my email</a></p>
+             <p>This link expires in 48 hours. If you didn't sign up for Battle Room, you can ignore this.</p>`
+    });
+  } catch (err) {
+    await logError('agencies:verification-email', err);
+  }
 
   return res.status(201).json(data);
 }

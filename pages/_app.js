@@ -1,5 +1,6 @@
 import { Component, useEffect, useState } from 'react';
 import Head from 'next/head';
+import { Analytics } from '@vercel/analytics/react';
 import * as Sentry from '@sentry/nextjs';
 import '../styles/globals.css';
 import NavMenu from '../components/NavMenu';
@@ -55,6 +56,7 @@ export default function App({ Component, pageProps }) {
       <ErrorBoundary>
         <Component {...pageProps} />
       </ErrorBoundary>
+      <Analytics />
       {!acknowledged && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,10,15,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 16 }}>
           <div className="card" style={{ maxWidth: 420 }}>

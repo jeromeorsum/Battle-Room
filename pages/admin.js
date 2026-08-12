@@ -52,6 +52,34 @@ export default function Admin() {
   const [showConvert, setShowConvert] = useState(false);
   const [convertForm, setConvertForm] = useState({ email: '', password: '' });
   const [convertMsg, setConvertMsg] = useState('');
+  const [verifyMsg, setVerifyMsg] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmName, setDeleteConfirmName] = useState('');
+  const [deleteConfirmCode, setDeleteConfirmCode] = useState('');
+  const [deleteMsg, setDeleteMsg] = useState('');
+
+  async function deleteAgency() {
+    setDeleteMsg('');
+    try {
+      const res = await fetch('/api/agency-delete', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmName: deleteConfirmName, confirmCode: deleteConfirmCode })
+      });
+      const data = await res.json();
+      if (!res.ok) { setDeleteMsg(data.error || 'Could not delete.'); return; }
+      window.location.href = '/';
+    } catch (e) { setDeleteMsg('Network error — try again.'); }
+  }
+
+  async function resendVerification() {
+    setVerifyMsg('Sending…');
+    try {
+      const res = await fetch('/api/resend-verification', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) { setVerifyMsg(data.error || 'Could not send.'); return; }
+      setVerifyMsg(data.alreadyVerified ? 'Already verified.' : 'Sent — check your inbox.');
+    } catch (e) { setVerifyMsg('Network error — try again.'); }
+  }
 
   const [team, setTeam] = useState([]);
   const [inviteForm, setInviteForm] = useState({ email: '', role: 'manager' });
@@ -607,6 +635,17 @@ export default function Admin() {
         <button className={adminTab === 'activity' ? 'active' : ''} onClick={() => setAdminTab('activity')}>Activity Log</button>
       </div>
 
+      {!isManager && agency.contact_email && !agency.contact_email_verified && (
+        <div className="card" style={{ borderColor: 'var(--gold)' }}>
+          <b>Your contact email isn't confirmed yet.</b>
+          <p className="dim" style={{ margin: '6px 0 10px' }}>
+            {agency.contact_email} hasn't clicked the confirmation link we sent. Billing codes, password resets, and invites all go to this address — confirm it so you don't get locked out of something later.
+          </p>
+          <button className="btn ghost" onClick={resendVerification} disabled={verifyMsg === 'Sending…'}>Resend confirmation email</button>
+          {verifyMsg && <p className="dim" style={{ fontSize: 12, marginTop: 6 }}>{verifyMsg}</p>}
+        </div>
+      )}
+
       {inactive && (
         <div className="card" style={{ borderColor: 'var(--pink)' }}>
           <b style={{ color: 'var(--pink)' }}>This agency's subscription is {agency.status === 'canceled' ? 'canceled' : 'past due'}.</b>
@@ -968,6 +1007,28 @@ export default function Admin() {
               {accentColor && <button className="btn ghost" onClick={() => { setAccentColor(''); saveAccentColor(); }}>Reset to default</button>}
             </div>
             {accentMsg && <p className="dim" style={{ fontSize: 12 }}>{accentMsg}</p>}
+          </div>
+
+          <div className="card" style={{ borderColor: 'var(--pink)' }}>
+            <h2 style={{ color: 'var(--pink)' }}>Danger Zone</h2>
+            <p className="dim">Permanently deletes this agency and everything tied to it — every creator, battle, post, and login. This cancels any active subscription first. There is no undo.</p>
+            {!showDeleteConfirm ? (
+              <button className="btn ghost" style={{ borderColor: 'var(--pink)', color: 'var(--pink)' }} onClick={() => setShowDeleteConfirm(true)}>Delete This Agency</button>
+            ) : (
+              <div>
+                <div className="field" style={{ maxWidth: 320 }}>
+                  <label>Type the agency name to confirm: <b>{agency.name}</b></label>
+                  <input value={deleteConfirmName} onChange={(e) => setDeleteConfirmName(e.target.value)} />
+                </div>
+                <div className="field" style={{ maxWidth: 260 }}>
+                  <label>Your admin code (or password)</label>
+                  <PasswordField value={deleteConfirmCode} onChange={(e) => setDeleteConfirmCode(e.target.value)} />
+                </div>
+                {deleteMsg && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{deleteMsg}</p>}
+                <button className="btn" style={{ background: 'var(--pink)', borderColor: 'var(--pink)' }} onClick={deleteAgency} disabled={!deleteConfirmName || !deleteConfirmCode}>Permanently Delete Everything</button>
+                <button className="btn ghost" style={{ marginLeft: 8 }} onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmName(''); setDeleteConfirmCode(''); setDeleteMsg(''); }}>Cancel</button>
+              </div>
+            )}
           </div>
         </>
       )}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Script from 'next/script';
 import { useRouter } from 'next/router';
 import { PRICING_TIERS } from '../lib/pricing';
 import PasswordField from '../components/PasswordField';
@@ -12,6 +13,20 @@ export default function Signup() {
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
   const [copiedReferral, setCopiedReferral] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
+  useEffect(() => {
+    if (!turnstileSiteKey || typeof window === 'undefined' || !window.turnstile) return;
+    const el = document.getElementById('turnstile-widget');
+    if (el && !el.hasChildNodes()) {
+      window.turnstile.render('#turnstile-widget', {
+        sitekey: turnstileSiteKey,
+        theme: 'dark',
+        callback: (token) => setTurnstileToken(token)
+      });
+    }
+  }, [turnstileSiteKey]);
 
   useEffect(() => {
     if (router.query.ref) {
@@ -25,10 +40,11 @@ export default function Signup() {
     if (!form.name || !form.adminCode) { setError('Agency name and an admin code are required.'); return; }
     if (!form.contactEmail || !form.contactPhone) { setError('Contact email and phone are both required.'); return; }
     if (!ageAttested) { setError('Please confirm you are 18 or older to continue.'); return; }
+    if (turnstileSiteKey && !turnstileToken) { setError('Please complete the verification check above.'); return; }
     try {
       const res = await fetch('/api/agencies', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, billingPeriod, ageAttested })
+        body: JSON.stringify({ ...form, billingPeriod, ageAttested, turnstileToken })
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Signup failed.'); return; }
@@ -132,6 +148,13 @@ export default function Signup() {
           <input type="checkbox" checked={ageAttested} onChange={(e) => setAgeAttested(e.target.checked)} style={{ width: 'auto', marginTop: 3 }} />
           <span className="dim" style={{ fontSize: 12 }}>I confirm I am 18 years of age or older. This platform is for adults only.</span>
         </label>
+
+        {turnstileSiteKey && (
+          <>
+            <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />
+            <div id="turnstile-widget" style={{ margin: '10px 0' }} />
+          </>
+        )}
         {error && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{error}</p>}
         <button className="btn" type="submit" disabled={!ageAttested}>Create Agency</button>
         <p className="dim" style={{ marginTop: 10 }}>This starts a 14-day free trial. One trial per email address.</p>
