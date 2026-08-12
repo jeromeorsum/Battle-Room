@@ -1,0 +1,49 @@
+name: Tests
+
+# Runs on every push/PR to main, AND on a schedule — so a problem gets
+# caught even on a day you didn't touch the code (e.g. Stripe changes
+# something on their end, or a dependency update breaks something).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 13 * * *' # 6am PT / 9am ET daily
+  workflow_dispatch: {} # lets you also click "Run workflow" manually on GitHub
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run test suite
+        run: npm test
+
+      - name: Confirm project builds
+        run: npm run build
+        env:
+          # Dummy values so the build step doesn't fail just because real
+          # secrets aren't present in CI — this only checks the code
+          # compiles, it doesn't talk to real Supabase/Stripe/etc.
+          SUPABASE_URL: https://placeholder.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: placeholder
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+          NEXT_PUBLIC_VAPID_PUBLIC_KEY: placeholder
+          VAPID_PRIVATE_KEY: placeholder
+          SESSION_SECRET: placeholder
+          SUPER_ADMIN_CODE: placeholder
+          STRIPE_SECRET_KEY: sk_test_placeholder
+          STRIPE_WEBHOOK_SECRET: whsec_placeholder
