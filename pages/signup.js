@@ -16,7 +16,7 @@ export default function Signup() {
   const [turnstileToken, setTurnstileToken] = useState('');
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
-  useEffect(() => {
+  function renderTurnstileWidget() {
     if (!turnstileSiteKey || typeof window === 'undefined' || !window.turnstile) return;
     const el = document.getElementById('turnstile-widget');
     if (el && !el.hasChildNodes()) {
@@ -26,6 +26,14 @@ export default function Signup() {
         callback: (token) => setTurnstileToken(token)
       });
     }
+  }
+
+  useEffect(() => {
+    // Covers the case where the script (loaded elsewhere on the page, or
+    // cached from a prior visit) is already available by the time this
+    // component mounts — the Script tag's onLoad won't fire again in that
+    // case, so this catches it too.
+    renderTurnstileWidget();
   }, [turnstileSiteKey]);
 
   useEffect(() => {
@@ -151,7 +159,7 @@ export default function Signup() {
 
         {turnstileSiteKey && (
           <>
-            <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />
+            <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" onLoad={renderTurnstileWidget} />
             <div id="turnstile-widget" style={{ margin: '10px 0' }} />
           </>
         )}
