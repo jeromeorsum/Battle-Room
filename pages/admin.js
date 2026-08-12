@@ -149,7 +149,8 @@ export default function Admin() {
       const data = await res.json();
       if (!res.ok) { setConvertMsg(data.error || 'Could not set up your account.'); return; }
       setShowConvert(false);
-      setAgency((a) => ({ ...a, suggestConvert: false }));
+      setAgency((a) => ({ ...a, suggestConvert: false, agencyUserId: 'self', email: data.email }));
+      loadTeam();
     } catch (e) { setConvertMsg('Network error — try again.'); }
   }
 
