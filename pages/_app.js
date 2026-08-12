@@ -1,4 +1,5 @@
 import { Component, useEffect, useState } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import '../styles/globals.css';
 import NavMenu from '../components/NavMenu';
 import { TOS_VERSION } from '../lib/tosVersion';
@@ -6,7 +7,10 @@ import { TOS_VERSION } from '../lib/tosVersion';
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null }; }
   static getDerivedStateFromError(error) { return { error }; }
-  componentDidCatch(error, info) { console.error('Caught by ErrorBoundary:', error, info); }
+  componentDidCatch(error, info) {
+    console.error('Caught by ErrorBoundary:', error, info);
+    Sentry.captureException(error, { extra: { componentStack: info?.componentStack } });
+  }
   render() {
     if (this.state.error) {
       return (
