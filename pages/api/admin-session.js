@@ -33,5 +33,5 @@ export default async function handler(req, res) {
     return res.status(402).json({ error: 'This agency\u2019s account is inactive.' });
   }
 
-  return res.status(200).json({ ...agency, role: session.role || 'admin' });
+  return res.status(200).json({ ...agency, role: session.role || 'admin', agencyUserId: session.agencyUserId || null, email: session.email || null });
 }

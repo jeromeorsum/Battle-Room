@@ -44,6 +44,15 @@ export default async function handler(req, res) {
   setSessionCookie(res, COOKIES.ADMIN, { agencyId: agency.id, role }, duration);
   setSessionCookie(res, COOKIES.AGENCY_SCOPE, { agencyId: agency.id }, duration);
 
+  // If this agency has never set up an individual admin account, nudge
+  // them toward it — the shared code still works (nothing breaks), but a
+  // named, revocable login is safer once real money/PII is involved.
+  let suggestConvert = false;
+  if (isAdmin) {
+    const { count } = await supabaseAdmin.from('agency_users').select('id', { count: 'exact', head: true }).eq('agency_id', agency.id).eq('role', 'admin');
+    suggestConvert = !count;
+  }
+
   const { admin_code_hash, manager_code_hash, ...safeAgency } = agency;
-  return res.status(200).json({ ...safeAgency, role });
+  return res.status(200).json({ ...safeAgency, role, suggestConvert });
 }

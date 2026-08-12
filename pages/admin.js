@@ -42,6 +42,25 @@ export default function Admin() {
   const [forgotForm, setForgotForm] = useState({ agencyCode: '', contactEmail: '' });
   const [forgotMsg, setForgotMsg] = useState('');
 
+  const [loginMode, setLoginMode] = useState('code'); // 'code' | 'email'
+  const [emailLogin, setEmailLogin] = useState({ agencyCode: '', email: '', password: '', remember: false });
+  const [needs2fa, setNeeds2fa] = useState(false);
+  const [twoFaCode, setTwoFaCode] = useState('');
+  const [forgotPwOpen, setForgotPwOpen] = useState(false);
+  const [forgotPwMsg, setForgotPwMsg] = useState('');
+
+  const [showConvert, setShowConvert] = useState(false);
+  const [convertForm, setConvertForm] = useState({ email: '', password: '' });
+  const [convertMsg, setConvertMsg] = useState('');
+
+  const [team, setTeam] = useState([]);
+  const [inviteForm, setInviteForm] = useState({ email: '', role: 'manager' });
+  const [inviteMsg, setInviteMsg] = useState('');
+  const [my2fa, setMy2fa] = useState(null); // { qrDataUrl, secret } while setting up
+  const [twoFaConfirmCode, setTwoFaConfirmCode] = useState('');
+  const [twoFaMsg, setTwoFaMsg] = useState('');
+  const [disable2faPassword, setDisable2faPassword] = useState('');
+
   useEffect(() => {
     (async () => {
       try {
@@ -75,6 +94,118 @@ export default function Admin() {
       setCodes({ agencyCode: '', adminCode: '', remember: false });
       loadRoster();
     } catch (e) { setError('Network error — try again.'); }
+  }
+
+  async function submitEmailLogin(e) {
+    if (e) e.preventDefault();
+    setError('');
+    try {
+      const res = await fetch('/api/agency-users/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(emailLogin)
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Login failed.'); return; }
+      if (data.requires2fa) { setNeeds2fa(true); return; }
+      const sessRes = await fetch('/api/admin-session');
+      if (sessRes.ok) { const d = await sessRes.json(); setAgency(d); setAccentColor(d.accent_color || ''); await loadRoster(); }
+    } catch (e) { setError('Network error — try again.'); }
+  }
+
+  async function submit2fa(e) {
+    if (e) e.preventDefault();
+    setError('');
+    try {
+      const res = await fetch('/api/agency-users/verify-2fa', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: twoFaCode })
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Incorrect code.'); return; }
+      setNeeds2fa(false); setTwoFaCode('');
+      const sessRes = await fetch('/api/admin-session');
+      if (sessRes.ok) { const d = await sessRes.json(); setAgency(d); setAccentColor(d.accent_color || ''); await loadRoster(); }
+    } catch (e) { setError('Network error — try again.'); }
+  }
+
+  async function submitForgotPassword() {
+    setForgotPwMsg('Sending…');
+    try {
+      const res = await fetch('/api/agency-users/forgot-password', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agencyCode: emailLogin.agencyCode, email: emailLogin.email })
+      });
+      const data = await res.json();
+      setForgotPwMsg(data.message || 'Check your email.');
+    } catch (e) { setForgotPwMsg('Network error — try again.'); }
+  }
+
+  async function submitConvert(e) {
+    if (e) e.preventDefault();
+    setConvertMsg('');
+    try {
+      const res = await fetch('/api/agency-users/convert', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(convertForm)
+      });
+      const data = await res.json();
+      if (!res.ok) { setConvertMsg(data.error || 'Could not set up your account.'); return; }
+      setShowConvert(false);
+      setAgency((a) => ({ ...a, suggestConvert: false }));
+    } catch (e) { setConvertMsg('Network error — try again.'); }
+  }
+
+  async function loadTeam() {
+    const res = await fetch('/api/agency-users');
+    if (res.ok) setTeam(await res.json());
+  }
+
+  async function inviteTeamMember(e) {
+    if (e) e.preventDefault();
+    setInviteMsg('Sending…');
+    try {
+      const res = await fetch('/api/agency-users', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(inviteForm)
+      });
+      const data = await res.json();
+      if (!res.ok) { setInviteMsg(data.error || 'Could not send invite.'); return; }
+      setInviteMsg(`Invite sent to ${data.invited}.`);
+      setInviteForm({ email: '', role: 'manager' });
+      loadTeam();
+    } catch (e) { setInviteMsg('Network error — try again.'); }
+  }
+
+  async function removeTeamMember(id) {
+    if (!confirm('Remove this team member\u2019s access?')) return;
+    const res = await fetch(`/api/agency-users/${id}`, { method: 'DELETE' });
+    if (res.ok) loadTeam(); else { const d = await res.json(); alert(d.error || 'Could not remove.'); }
+  }
+
+  async function start2faSetup() {
+    setTwoFaMsg('');
+    const res = await fetch('/api/agency-users/2fa-setup', { method: 'POST' });
+    const data = await res.json();
+    if (res.ok) setMy2fa(data); else setTwoFaMsg(data.error || 'Could not start 2FA setup.');
+  }
+
+  async function confirm2faSetup() {
+    setTwoFaMsg('');
+    const res = await fetch('/api/agency-users/2fa-confirm', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: twoFaConfirmCode })
+    });
+    const data = await res.json();
+    if (!res.ok) { setTwoFaMsg(data.error || 'Incorrect code.'); return; }
+    setMy2fa(null); setTwoFaConfirmCode(''); setTwoFaMsg('Two-factor authentication is now on for your account.');
+    loadTeam();
+  }
+
+  async function disable2fa() {
+    setTwoFaMsg('');
+    const res = await fetch('/api/agency-users/2fa-disable', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: disable2faPassword })
+    });
+    const data = await res.json();
+    if (!res.ok) { setTwoFaMsg(data.error || 'Could not disable 2FA.'); return; }
+    setDisable2faPassword(''); setTwoFaMsg('Two-factor authentication turned off.');
+    loadTeam();
   }
 
   async function loadRoster() {
@@ -114,6 +245,14 @@ export default function Admin() {
       setPresets(saved);
     } catch (e) { setPresets([]); }
   }, [agency?.id]);
+
+  useEffect(() => {
+    if (agency?.suggestConvert) setShowConvert(true);
+  }, [agency?.suggestConvert]);
+
+  useEffect(() => {
+    if (agency?.id && adminTab === 'settings' && agency.role !== 'manager') loadTeam();
+  }, [agency?.id, adminTab]);
 
   function savePreset() {
     if (!presetName.trim()) return;
@@ -336,34 +475,83 @@ export default function Admin() {
   if (loading) return <div className="wrap"><SkeletonList count={3} /></div>;
 
   if (!agency) {
+    if (needs2fa) {
+      return (
+        <div className="wrap">
+          <form className="card" style={{ maxWidth: 380, margin: '60px auto' }} onSubmit={submit2fa}>
+            <h2>Two-Factor Code</h2>
+            <p className="dim">Enter the 6-digit code from your authenticator app.</p>
+            <div className="field"><input value={twoFaCode} onChange={(e) => setTwoFaCode(e.target.value)} placeholder="123456" maxLength={6} autoFocus /></div>
+            {error && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{error}</p>}
+            <button className="btn" type="submit" disabled={twoFaCode.length !== 6}>Verify</button>
+          </form>
+        </div>
+      );
+    }
+
     return (
       <div className="wrap">
-        <form className="card" style={{ maxWidth: 380, margin: '60px auto' }} onSubmit={submitLogin} onKeyDown={focusNext}>
-          <h2>Agency Admin Login</h2>
-          <p className="dim">Enter your agency code and your personal admin code.</p>
-          <div className="field"><label>Agency code</label><input value={codes.agencyCode} onChange={(e) => setCodes({ ...codes, agencyCode: e.target.value.toUpperCase() })} placeholder="e.g. FALCON7X2" /></div>
-          <div className="field"><label>Admin code</label>
-            <PasswordField value={codes.adminCode} onChange={(e) => setCodes({ ...codes, adminCode: e.target.value })} placeholder="Admin code" />
+        <div className="card" style={{ maxWidth: 380, margin: '60px auto' }}>
+          <div className="tabs" style={{ marginBottom: 14 }}>
+            <button type="button" className={loginMode === 'code' ? 'active' : ''} onClick={() => { setLoginMode('code'); setError(''); }}>Access Code</button>
+            <button type="button" className={loginMode === 'email' ? 'active' : ''} onClick={() => { setLoginMode('email'); setError(''); }}>Email &amp; Password</button>
           </div>
-          <label style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '6px 0 12px' }}>
-            <input type="checkbox" checked={codes.remember} onChange={(e) => setCodes({ ...codes, remember: e.target.checked })} style={{ width: 'auto' }} />
-            <span className="dim">Remember me on this device for 30 days</span>
-          </label>
-          {error && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{error}</p>}
-          <button className="btn" type="submit">Unlock</button>
-          <p className="dim" style={{ marginTop: 14 }}>No agency yet? <a href="/signup" style={{ color: 'var(--cyan)' }}>Sign up here</a>.</p>
-          <button type="button" className="btn ghost" style={{ marginTop: 10, width: '100%' }} onClick={() => setForgotOpen((v) => !v)}>
-            {forgotOpen ? 'Hide' : 'Forgot your admin code?'}
-          </button>
-          {forgotOpen && (
-            <div style={{ marginTop: 10 }}>
-              <div className="field"><label>Agency code</label><input value={forgotForm.agencyCode} onChange={(e) => setForgotForm({ ...forgotForm, agencyCode: e.target.value.toUpperCase() })} /></div>
-              <div className="field"><label>Contact email on file</label><input type="email" value={forgotForm.contactEmail} onChange={(e) => setForgotForm({ ...forgotForm, contactEmail: e.target.value })} /></div>
-              {forgotMsg && <p className="dim" style={{ fontSize: 12 }}>{forgotMsg}</p>}
-              <button type="button" className="btn" style={{ width: '100%' }} onClick={submitForgot}>Send Reset Link</button>
-            </div>
+
+          {loginMode === 'code' ? (
+            <form onSubmit={submitLogin} onKeyDown={focusNext}>
+              <h2>Agency Admin Login</h2>
+              <p className="dim">Enter your agency code and your personal admin code.</p>
+              <div className="field"><label>Agency code</label><input value={codes.agencyCode} onChange={(e) => setCodes({ ...codes, agencyCode: e.target.value.toUpperCase() })} placeholder="e.g. FALCON7X2" /></div>
+              <div className="field"><label>Admin code</label>
+                <PasswordField value={codes.adminCode} onChange={(e) => setCodes({ ...codes, adminCode: e.target.value })} placeholder="Admin code" />
+              </div>
+              <label style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '6px 0 12px' }}>
+                <input type="checkbox" checked={codes.remember} onChange={(e) => setCodes({ ...codes, remember: e.target.checked })} style={{ width: 'auto' }} />
+                <span className="dim">Remember me on this device for 30 days</span>
+              </label>
+              {error && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{error}</p>}
+              <button className="btn" type="submit">Unlock</button>
+              <p className="dim" style={{ marginTop: 14 }}>No agency yet? <a href="/signup" style={{ color: 'var(--cyan)' }}>Sign up here</a>.</p>
+              <button type="button" className="btn ghost" style={{ marginTop: 10, width: '100%' }} onClick={() => setForgotOpen((v) => !v)}>
+                {forgotOpen ? 'Hide' : 'Forgot your admin code?'}
+              </button>
+              {forgotOpen && (
+                <div style={{ marginTop: 10 }}>
+                  <div className="field"><label>Agency code</label><input value={forgotForm.agencyCode} onChange={(e) => setForgotForm({ ...forgotForm, agencyCode: e.target.value.toUpperCase() })} /></div>
+                  <div className="field"><label>Contact email on file</label><input type="email" value={forgotForm.contactEmail} onChange={(e) => setForgotForm({ ...forgotForm, contactEmail: e.target.value })} /></div>
+                  {forgotMsg && <p className="dim" style={{ fontSize: 12 }}>{forgotMsg}</p>}
+                  <button type="button" className="btn" style={{ width: '100%' }} onClick={submitForgot}>Send Reset Link</button>
+                </div>
+              )}
+            </form>
+          ) : (
+            <form onSubmit={submitEmailLogin}>
+              <h2>Team Member Login</h2>
+              <p className="dim">Sign in with your individual email and password.</p>
+              <div className="field"><label>Agency code</label><input value={emailLogin.agencyCode} onChange={(e) => setEmailLogin({ ...emailLogin, agencyCode: e.target.value.toUpperCase() })} placeholder="e.g. FALCON7X2" /></div>
+              <div className="field"><label>Email</label><input type="email" value={emailLogin.email} onChange={(e) => setEmailLogin({ ...emailLogin, email: e.target.value })} /></div>
+              <div className="field"><label>Password</label>
+                <PasswordField value={emailLogin.password} onChange={(e) => setEmailLogin({ ...emailLogin, password: e.target.value })} placeholder="Password" />
+              </div>
+              <label style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '6px 0 12px' }}>
+                <input type="checkbox" checked={emailLogin.remember} onChange={(e) => setEmailLogin({ ...emailLogin, remember: e.target.checked })} style={{ width: 'auto' }} />
+                <span className="dim">Remember me on this device for 30 days</span>
+              </label>
+              {error && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{error}</p>}
+              <button className="btn" type="submit">Sign In</button>
+              <button type="button" className="btn ghost" style={{ marginTop: 10, width: '100%' }} onClick={() => { setForgotPwOpen((v) => !v); setForgotPwMsg(''); }}>
+                {forgotPwOpen ? 'Hide' : 'Forgot your password?'}
+              </button>
+              {forgotPwOpen && (
+                <div style={{ marginTop: 10 }}>
+                  <p className="dim" style={{ fontSize: 12 }}>We'll email a reset link to the address above (using the agency code entered too).</p>
+                  {forgotPwMsg && <p className="dim" style={{ fontSize: 12 }}>{forgotPwMsg}</p>}
+                  <button type="button" className="btn" style={{ width: '100%' }} onClick={submitForgotPassword}>Send Reset Link</button>
+                </div>
+              )}
+            </form>
           )}
-        </form>
+        </div>
       </div>
     );
   }
@@ -393,6 +581,24 @@ export default function Admin() {
         </div>
         <button className="btn ghost" onClick={logout}>Log out</button>
       </header>
+
+      {showConvert && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,10,15,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 16 }}>
+          <div className="card" style={{ maxWidth: 420 }}>
+            <h2>Secure your account</h2>
+            <p className="dim">You're logged in with the shared admin code. Set up your own email &amp; password so your access can't be lost or copied along with the shared code — you can add two-factor authentication afterward too.</p>
+            <form onSubmit={submitConvert}>
+              <div className="field"><label>Your email</label><input type="email" required value={convertForm.email} onChange={(e) => setConvertForm({ ...convertForm, email: e.target.value })} /></div>
+              <div className="field"><label>Choose a password (10+ characters)</label>
+                <PasswordField value={convertForm.password} onChange={(e) => setConvertForm({ ...convertForm, password: e.target.value })} />
+              </div>
+              {convertMsg && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{convertMsg}</p>}
+              <button className="btn" type="submit" style={{ width: '100%' }}>Set Up My Account</button>
+            </form>
+            <button className="btn ghost" style={{ width: '100%', marginTop: 8 }} onClick={() => setShowConvert(false)}>Remind me later</button>
+          </div>
+        </div>
+      )}
 
       <div className="tabs">
         <button className={adminTab === 'dashboard' ? 'active' : ''} onClick={() => setAdminTab('dashboard')}>Dashboard</button>
@@ -668,6 +874,64 @@ export default function Admin() {
                 </div>
               </>
             ) : <p className="dim">No referral code on file.</p>}
+          </div>
+
+          <div className="card">
+            <h2>Team &amp; Security</h2>
+            <p className="dim">Individual logins instead of (or alongside) the shared admin/manager codes — each person gets their own email, password, and optional two-factor authentication, and can be removed individually.</p>
+
+            {agency.agencyUserId ? (
+              <div style={{ marginBottom: 14, paddingBottom: 14, borderBottom: '1px solid var(--line)' }}>
+                <b>Two-factor authentication (your account)</b>
+                {my2fa ? (
+                  <div style={{ marginTop: 8 }}>
+                    <p className="dim">Scan this in your authenticator app, then enter the code it shows.</p>
+                    <img src={my2fa.qrDataUrl} alt="2FA QR code" style={{ width: 160, height: 160, background: '#fff', padding: 6, borderRadius: 8 }} />
+                    <div className="field" style={{ maxWidth: 200, marginTop: 8 }}>
+                      <input value={twoFaConfirmCode} onChange={(e) => setTwoFaConfirmCode(e.target.value)} placeholder="123456" maxLength={6} />
+                    </div>
+                    <button className="btn" disabled={twoFaConfirmCode.length !== 6} onClick={confirm2faSetup}>Confirm &amp; Enable</button>
+                  </div>
+                ) : (
+                  <div style={{ marginTop: 8 }}>
+                    <button className="btn ghost" onClick={start2faSetup}>Turn on two-factor authentication</button>
+                    <div style={{ marginTop: 8 }}>
+                      <PasswordField value={disable2faPassword} onChange={(e) => setDisable2faPassword(e.target.value)} placeholder="Password (to turn off)" />
+                      <button className="btn ghost" style={{ marginTop: 6 }} onClick={disable2fa} disabled={!disable2faPassword}>Turn off two-factor authentication</button>
+                    </div>
+                  </div>
+                )}
+                {twoFaMsg && <p className="dim" style={{ fontSize: 12, marginTop: 6 }}>{twoFaMsg}</p>}
+              </div>
+            ) : (
+              <p className="dim" style={{ marginBottom: 14 }}>You're logged in with the shared admin code — set up an individual account above to enable 2FA for yourself.</p>
+            )}
+
+            <b>Team members</b>
+            <div style={{ marginTop: 8 }}>
+              {team.length === 0 && <p className="dim">No individual accounts yet.</p>}
+              {team.map((t) => (
+                <div key={t.id} className="row" style={{ justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid var(--line)' }}>
+                  <div>
+                    <b>{t.email}</b> <span className="dim">· {t.role}{t.totp_enabled ? ' · 2FA on' : ''}</span>
+                    <div className="dim" style={{ fontSize: 11 }}>{t.last_login_at ? `Last login ${new Date(t.last_login_at).toLocaleDateString()}` : 'Never logged in'}</div>
+                  </div>
+                  <button className="btn ghost" onClick={() => removeTeamMember(t.id)}>Remove</button>
+                </div>
+              ))}
+            </div>
+
+            <form onSubmit={inviteTeamMember} style={{ marginTop: 12 }}>
+              <div className="row">
+                <input type="email" required placeholder="teammate@email.com" value={inviteForm.email} onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })} style={{ flex: 1 }} />
+                <select value={inviteForm.role} onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value })}>
+                  <option value="manager">Manager</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <button className="btn" type="submit">Invite</button>
+              </div>
+              {inviteMsg && <p className="dim" style={{ fontSize: 12, marginTop: 6 }}>{inviteMsg}</p>}
+            </form>
           </div>
 
           <form className="card" onSubmit={changeAdminCode} onKeyDown={focusNext}>
