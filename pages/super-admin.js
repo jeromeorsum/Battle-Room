@@ -139,6 +139,13 @@ export default function SuperAdmin() {
     if (res.ok) alert(`New admin code set for ${name}.`); else alert('Could not reset admin code.');
   }
 
+  async function deleteAgency(id, name) {
+    const typed = prompt(`This permanently deletes "${name}" and everything tied to it — creators, battles, posts, logins. There is no undo.\n\nType the agency name exactly to confirm:`);
+    if (typed !== name) { if (typed !== null) alert('Name didn\u2019t match — nothing was deleted.'); return; }
+    const res = await fetch(`/api/super-admin/agencies/${id}`, { method: 'DELETE' });
+    if (res.ok) { alert(`${name} has been deleted.`); checkSession(); } else { alert('Could not delete the agency.'); }
+  }
+
   if (loading) return <div className="wrap"><SkeletonList count={3} /></div>;
 
   if (!unlocked) {
@@ -306,6 +313,7 @@ export default function SuperAdmin() {
                 </div>
                 <button className="btn ghost" style={{ fontSize: 12 }} onClick={() => resetAdminCode(a.id, a.name)}>Reset Admin Code</button>
                 <button className="btn ghost" style={{ fontSize: 12 }} onClick={() => toggleRoster(a.id)}>{openRoster === a.id ? 'Hide Roster' : 'View Roster'}</button>
+                <button className="btn ghost" style={{ fontSize: 12, color: 'var(--pink)', borderColor: 'var(--pink)' }} onClick={() => deleteAgency(a.id, a.name)}>Delete</button>
               </div>
             </div>
             {openRoster === a.id && (

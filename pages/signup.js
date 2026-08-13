@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Script from 'next/script';
 import { useRouter } from 'next/router';
+import * as Sentry from '@sentry/nextjs';
 import { PRICING_TIERS } from '../lib/pricing';
 import PasswordField from '../components/PasswordField';
 
@@ -14,7 +15,17 @@ export default function Signup() {
   const [copied, setCopied] = useState(false);
   const [copiedReferral, setCopiedReferral] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState('');
+  const [turnstileUnavailable, setTurnstileUnavailable] = useState(false);
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
+  function reportTurnstileUnavailable(reason) {
+    setTurnstileUnavailable(true);
+    // This blocks real signups when it happens, so it's worth knowing about
+    // immediately rather than finding out from a confused user — same
+    // failure mode that happened once already (Cloudflare's script server
+    // returning 503).
+    Sentry.captureMessage(`Turnstile widget failed to load on signup: ${reason}`, 'warning');
+  }
 
   function renderTurnstileWidget() {
     if (!turnstileSiteKey || typeof window === 'undefined' || !window.turnstile) return;
@@ -37,6 +48,19 @@ export default function Signup() {
   }, [turnstileSiteKey]);
 
   useEffect(() => {
+    if (!turnstileSiteKey) return;
+    // If the script hasn't loaded and rendered a working widget within a
+    // reasonable window, stop leaving the person staring at an empty box
+    // with no explanation — tell them plainly what's going on.
+    const timer = setTimeout(() => {
+      if (!document.getElementById('turnstile-widget')?.hasChildNodes()) {
+        reportTurnstileUnavailable('timed out waiting for script to load');
+      }
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [turnstileSiteKey]);
+
+  useEffect(() => {
     if (router.query.ref) {
       setForm((f) => ({ ...f, referralCode: String(router.query.ref).toUpperCase() }));
     }
@@ -48,7 +72,12 @@ export default function Signup() {
     if (!form.name || !form.adminCode) { setError('Agency name and an admin code are required.'); return; }
     if (!form.contactEmail || !form.contactPhone) { setError('Contact email and phone are both required.'); return; }
     if (!ageAttested) { setError('Please confirm you are 18 or older to continue.'); return; }
-    if (turnstileSiteKey && !turnstileToken) { setError('Please complete the verification check above.'); return; }
+    if (turnstileSiteKey && !turnstileToken) {
+      setError(turnstileUnavailable
+        ? 'Verification is temporarily unavailable — please try again in a few minutes.'
+        : 'Please complete the verification check above.');
+      return;
+    }
     try {
       const res = await fetch('/api/agencies', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -159,8 +188,18 @@ export default function Signup() {
 
         {turnstileSiteKey && (
           <>
-            <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" onLoad={renderTurnstileWidget} />
+            <Script
+              src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+              strategy="afterInteractive"
+              onLoad={renderTurnstileWidget}
+              onError={() => reportTurnstileUnavailable('script failed to load')}
+            />
             <div id="turnstile-widget" style={{ margin: '10px 0' }} />
+            {turnstileUnavailable && (
+              <p className="dim" style={{ fontSize: 12, color: 'var(--gold)' }}>
+                The verification check is temporarily unavailable — this is on our end, not yours. Please try again in a few minutes.
+              </p>
+            )}
           </>
         )}
         {error && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{error}</p>}
