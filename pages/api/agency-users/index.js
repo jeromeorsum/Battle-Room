@@ -4,6 +4,7 @@ import { createAuthToken } from '../../../lib/authTokens';
 import { sendEmail } from '../../../lib/emailAdmin';
 import { logAudit } from '../../../lib/auditLog';
 import { logError } from '../../../lib/logger';
+import { verifyStillActive } from '../../../lib/verifyActiveSession';
 
 export default async function handler(req, res) {
   const session = readSession(req, COOKIES.ADMIN);
@@ -18,6 +19,7 @@ export default async function handler(req, res) {
 
   if (req.method === 'POST') {
     if (session.role !== 'admin') return res.status(403).json({ error: 'Only an admin can invite team members.' });
+    if (!(await verifyStillActive(session))) return res.status(401).json({ error: 'Your account no longer has access — log in again.' });
     const { email, role } = req.body;
     if (!email || !['admin', 'manager'].includes(role)) return res.status(400).json({ error: 'A valid email and role (admin or manager) are required.' });
     const normalizedEmail = email.trim().toLowerCase();

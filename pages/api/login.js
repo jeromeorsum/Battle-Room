@@ -27,7 +27,7 @@ export default async function handler(req, res) {
   } else {
     // Normal path: sign in by typing your handle or nickname, scoped to
     // whichever agency this browser currently has resolved.
-    const agencyId = resolveAgencyId(req);
+    const agencyId = await resolveAgencyId(req);
     if (!agencyId) return res.status(401).json({ error: 'Enter your agency code first.' });
 
     const clean = loginIdentifier.trim().replace(/^@+/, '');

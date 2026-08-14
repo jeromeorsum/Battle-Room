@@ -3,6 +3,7 @@ import { readSession, clearSessionCookie, COOKIES } from '../../lib/session';
 import { supabaseAdmin } from '../../lib/supabaseAdmin';
 import { stripe } from '../../lib/stripeAdmin';
 import { verifyPassword } from '../../lib/password';
+import { verifyStillActive } from '../../lib/verifyActiveSession';
 import { logError } from '../../lib/logger';
 
 export default async function handler(req, res) {
@@ -11,6 +12,7 @@ export default async function handler(req, res) {
   const session = readSession(req, COOKIES.ADMIN);
   if (!session) return res.status(401).json({ error: 'Log in first.' });
   if (session.role !== 'admin') return res.status(403).json({ error: 'Only an admin can delete the agency.' });
+  if (!(await verifyStillActive(session))) return res.status(401).json({ error: 'Your account no longer has access — log in again.' });
 
   const { confirmCode, confirmName } = req.body;
   if (!confirmCode) return res.status(400).json({ error: 'Enter your admin code (or password) to confirm.' });

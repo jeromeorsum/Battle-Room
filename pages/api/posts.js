@@ -3,11 +3,12 @@ import { readSession, COOKIES } from '../../lib/session';
 import { canWrite } from '../../lib/agencyStatus';
 import { containsBlockedContent } from '../../lib/moderation';
 import { resolveAgencyId } from '../../lib/agencyScope';
+import { checkAndRecordActionRate } from '../../lib/rateLimit';
 import { logError } from '../../lib/logger';
 
 export default async function handler(req, res) {
   const creatorSession = readSession(req, COOKIES.CREATOR);
-  const agencyId = resolveAgencyId(req);
+  const agencyId = await resolveAgencyId(req);
   if (!agencyId) return res.status(401).json({ error: 'Enter your agency code first.' });
 
   if (req.method === 'GET') {
@@ -22,6 +23,11 @@ export default async function handler(req, res) {
 
   if (req.method === 'POST') {
     if (!creatorSession) return res.status(401).json({ error: 'Log in first.' });
+
+    // 15 posts per 10 minutes per creator — generous for real use, but
+    // stops a scripted loop from flooding an agency's feed.
+    const rate = await checkAndRecordActionRate(`post:${creatorSession.creatorId}`, 10, 15);
+    if (!rate.allowed) return res.status(429).json({ error: `You're posting too fast — try again in ${Math.ceil(rate.retryAfterSeconds / 60)} minute(s).` });
 
     const { data: agency } = await supabaseAdmin.from('agencies').select('status, trial_ends_at').eq('id', creatorSession.agencyId).single();
     if (!canWrite(agency?.status, agency?.trial_ends_at)) return res.status(402).json({ error: 'This agency\u2019s subscription is inactive. Contact your agency admin.' });

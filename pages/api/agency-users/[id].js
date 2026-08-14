@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 import { readSession, COOKIES } from '../../../lib/session';
 import { logAudit } from '../../../lib/auditLog';
+import { verifyStillActive } from '../../../lib/verifyActiveSession';
 
 export default async function handler(req, res) {
   if (req.method !== 'DELETE') { res.setHeader('Allow', ['DELETE']); return res.status(405).end(); }
@@ -8,6 +9,7 @@ export default async function handler(req, res) {
   const session = readSession(req, COOKIES.ADMIN);
   if (!session) return res.status(401).json({ error: 'Log in first.' });
   if (session.role !== 'admin') return res.status(403).json({ error: 'Only an admin can remove team members.' });
+  if (!(await verifyStillActive(session))) return res.status(401).json({ error: 'Your account no longer has access — log in again.' });
 
   const { id } = req.query;
   const { data: target } = await supabaseAdmin.from('agency_users').select('id, email, role, agency_id').eq('id', id).single();

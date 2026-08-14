@@ -5,15 +5,15 @@ import { canWrite } from '../../lib/agencyStatus';
 import { resolveAgencyId } from '../../lib/agencyScope';
 import { logAudit } from '../../lib/auditLog';
 
-function requireAgencyScope(req, res) {
-  const agencyId = resolveAgencyId(req);
+async function requireAgencyScope(req, res) {
+  const agencyId = await resolveAgencyId(req);
   if (!agencyId) { res.status(401).json({ error: 'Enter your agency code first.' }); return null; }
   return agencyId;
 }
 
 export default async function handler(req, res) {
   if (req.method === 'GET') {
-    const agencyId = requireAgencyScope(req, res);
+    const agencyId = await requireAgencyScope(req, res);
     if (!agencyId) return;
     const { data, error } = await supabaseAdmin
       .from('creators')
@@ -41,7 +41,7 @@ export default async function handler(req, res) {
       if (!agencyByCode) return res.status(404).json({ error: 'That agency code is no longer valid — please re-enter it.' });
       agencyId = agencyByCode.id;
     } else {
-      agencyId = requireAgencyScope(req, res);
+      agencyId = await requireAgencyScope(req, res);
       if (!agencyId) return;
     }
 
