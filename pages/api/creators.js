@@ -4,6 +4,7 @@ import { readSession, setSessionCookie, COOKIES } from '../../lib/session';
 import { canWrite } from '../../lib/agencyStatus';
 import { resolveAgencyId } from '../../lib/agencyScope';
 import { logAudit } from '../../lib/auditLog';
+import { checkAndRecordActionRate } from '../../lib/rateLimit';
 
 async function requireAgencyScope(req, res) {
   const agencyId = await resolveAgencyId(req, req.headers['x-session-role']);
@@ -49,6 +50,12 @@ export default async function handler(req, res) {
       .from('agencies').select('id, max_creators, status, trial_ends_at').eq('id', agencyId).single();
     if (agencyErr || !agency) return res.status(404).json({ error: 'Agency not found.' });
     if (!canWrite(agency.status, agency.trial_ends_at)) return res.status(402).json({ error: 'This agency\u2019s subscription is inactive. Contact your agency admin.' });
+
+    // 20 creators added per 10 minutes per agency — the plan's max_creators
+    // cap bounds total volume, but does nothing to stop a scripted loop
+    // from burning through that limit in under a second.
+    const rate = await checkAndRecordActionRate(`creator-add:${agencyId}`, 10, 20);
+    if (!rate.allowed) return res.status(429).json({ error: `Adding creators too fast — try again in ${Math.ceil(rate.retryAfterSeconds / 60)} minute(s).` });
 
     const { count } = await supabaseAdmin.from('creators').select('id', { count: 'exact', head: true }).eq('agency_id', agencyId);
     if ((count || 0) >= agency.max_creators) {

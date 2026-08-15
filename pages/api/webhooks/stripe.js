@@ -55,26 +55,39 @@ export default async function handler(req, res) {
             ...(billingPeriod ? { billing_period: billingPeriod } : {})
           }).eq('id', agencyId);
 
-          // Referral reward: if this agency was referred, and this is their
-          // FIRST time going active (not a renewal), credit the referrer a
-          // free month via Stripe's customer balance — it's automatically
-          // applied to their next invoice.
+          // Referral reward: if this agency was referred, and this specific
+          // referral hasn't already paid out, credit the referrer a free
+          // month via Stripe's customer balance — it's automatically
+          // applied to their next invoice. Without the claimed-at guard
+          // below, this fires again on every future checkout for the same
+          // agency (a deliberate cancel-then-resubscribe, or even just
+          // Stripe retrying webhook delivery, which it explicitly does),
+          // paying the referrer out repeatedly for a single referral.
           const { data: referredAgency } = await supabaseAdmin
-            .from('agencies').select('referred_by_code, plan_tier, billing_period').eq('id', agencyId).single();
-          if (referredAgency?.referred_by_code) {
+            .from('agencies').select('referred_by_code, referral_reward_claimed_at, plan_tier, billing_period').eq('id', agencyId).single();
+          if (referredAgency?.referred_by_code && !referredAgency.referral_reward_claimed_at) {
             const { data: referrer } = await supabaseAdmin
               .from('agencies').select('id, stripe_customer_id, plan_tier, billing_period')
               .eq('referral_code', referredAgency.referred_by_code).single();
             if (referrer?.stripe_customer_id) {
-              const referrerTier = tierById(referrer.plan_tier);
-              const rewardAmount = referrer.billing_period === 'yearly' ? referrerTier.yearly : referrerTier.monthly;
-              if (rewardAmount) {
-                await stripe.customers.createBalanceTransaction(referrer.stripe_customer_id, {
-                  amount: -Math.round(rewardAmount * 100), // negative = credit, Stripe uses cents
-                  currency: 'usd',
-                  description: 'Referral reward — referred agency subscribed'
-                });
-                await logAudit(referrer.id, 'System', 'Referral reward credited', `$${rewardAmount} credit for referring a new paying agency`);
+              // Claim it first, and only if still unclaimed (WHERE guards
+              // against a second webhook delivery racing this same one) —
+              // if the claim doesn't stick, someone else already paid this
+              // reward out, so skip crediting again.
+              const { data: claimed } = await supabaseAdmin
+                .from('agencies').update({ referral_reward_claimed_at: new Date().toISOString() })
+                .eq('id', agencyId).is('referral_reward_claimed_at', null).select('id');
+              if (claimed && claimed.length) {
+                const referrerTier = tierById(referrer.plan_tier);
+                const rewardAmount = referrer.billing_period === 'yearly' ? referrerTier.yearly : referrerTier.monthly;
+                if (rewardAmount) {
+                  await stripe.customers.createBalanceTransaction(referrer.stripe_customer_id, {
+                    amount: -Math.round(rewardAmount * 100), // negative = credit, Stripe uses cents
+                    currency: 'usd',
+                    description: 'Referral reward — referred agency subscribed'
+                  });
+                  await logAudit(referrer.id, 'System', 'Referral reward credited', `$${rewardAmount} credit for referring a new paying agency`);
+                }
               }
             }
           }

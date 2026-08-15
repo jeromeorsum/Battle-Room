@@ -5,6 +5,7 @@ import { readSession, COOKIES } from '../../lib/session';
 import { canWrite } from '../../lib/agencyStatus';
 import { getAgencyStatus } from '../../lib/agencyStatusDb';
 import { resolveAgencyId } from '../../lib/agencyScope';
+import { checkAndRecordActionRate } from '../../lib/rateLimit';
 
 export default async function handler(req, res) {
   const creatorSession = readSession(req, COOKIES.CREATOR);
@@ -39,6 +40,13 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: 'You can only propose battles you\u2019re part of.' });
     }
     if (!localDateTime) return res.status(400).json({ error: 'Missing date/time.' });
+
+    // 20 battles per 10 minutes per actor — generous for real bulk
+    // scheduling, but stops a scripted loop from spamming battle rows
+    // (and the push notification that fires on every one of them).
+    const rateKey = proposerId ? `battle:creator:${proposerId}` : `battle:admin:${agencyId}`;
+    const rate = await checkAndRecordActionRate(rateKey, 10, 20);
+    if (!rate.allowed) return res.status(429).json({ error: `Too many battles booked too fast — try again in ${Math.ceil(rate.retryAfterSeconds / 60)} minute(s).` });
 
     const { status, trialEndsAt } = await getAgencyStatus(agencyId);
     if (!canWrite(status, trialEndsAt)) return res.status(402).json({ error: 'This agency\u2019s subscription is inactive. Contact your agency admin.' });
