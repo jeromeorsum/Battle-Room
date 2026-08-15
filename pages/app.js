@@ -30,7 +30,8 @@ export default function Home() {
     const aid = agencyId || agency?.id;
     if (!aid) return;
     try {
-      const [cRes, bRes] = await Promise.all([fetch('/api/creators'), fetch('/api/battles')]);
+      const creatorHeader = { headers: { 'X-Session-Role': 'creator' } };
+      const [cRes, bRes] = await Promise.all([fetch('/api/creators', creatorHeader), fetch('/api/battles', creatorHeader)]);
       if (cRes.status === 402 || bRes.status === 402) {
         setAgency(null); setMyId(null); setCreators([]); setBattles([]); setStep('profile');
         setAgencyError('This agency\u2019s account is inactive. Contact your agency admin.');
@@ -599,7 +600,7 @@ function BoardStep({ me }) {
   async function load() {
     setLoadError('');
     try {
-      const res = await fetch('/api/posts');
+      const res = await fetch('/api/posts', { headers: { 'X-Session-Role': 'creator' } });
       if (res.ok) { setPosts(await res.json()); }
       else { const d = await res.json(); setLoadError(d.error || 'Could not load posts.'); }
     } catch (e) { setLoadError('Network error loading posts.'); }
@@ -614,7 +615,7 @@ function BoardStep({ me }) {
     setPosting(true);
     try {
       const res = await fetch('/api/posts', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message })
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Session-Role': 'creator' }, body: JSON.stringify({ message })
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Could not post.'); setPosting(false); return; }

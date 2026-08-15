@@ -6,7 +6,7 @@ import { resolveAgencyId } from '../../lib/agencyScope';
 import { logAudit } from '../../lib/auditLog';
 
 async function requireAgencyScope(req, res) {
-  const agencyId = await resolveAgencyId(req);
+  const agencyId = await resolveAgencyId(req, req.headers['x-session-role']);
   if (!agencyId) { res.status(401).json({ error: 'Enter your agency code first.' }); return null; }
   return agencyId;
 }

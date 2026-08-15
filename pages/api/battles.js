@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   const adminSession = readSession(req, COOKIES.ADMIN);
 
   if (req.method === 'GET') {
-    const agencyId = await resolveAgencyId(req);
+    const agencyId = await resolveAgencyId(req, req.headers['x-session-role']);
     if (!agencyId) return res.status(401).json({ error: 'Enter your agency code first.' });
     const { data, error } = await supabaseAdmin
       .from('battles')

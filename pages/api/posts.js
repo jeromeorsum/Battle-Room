@@ -8,7 +8,7 @@ import { logError } from '../../lib/logger';
 
 export default async function handler(req, res) {
   const creatorSession = readSession(req, COOKIES.CREATOR);
-  const agencyId = await resolveAgencyId(req);
+  const agencyId = await resolveAgencyId(req, req.headers['x-session-role']);
   if (!agencyId) return res.status(401).json({ error: 'Enter your agency code first.' });
 
   if (req.method === 'GET') {

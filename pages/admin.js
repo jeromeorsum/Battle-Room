@@ -239,7 +239,8 @@ export default function Admin() {
 
   async function loadRoster() {
     try {
-      const [cRes, bRes, pRes, aRes] = await Promise.all([fetch('/api/creators'), fetch('/api/battles'), fetch('/api/posts'), fetch('/api/admin/audit-log')]);
+      const adminHeader = { headers: { 'X-Session-Role': 'admin' } };
+      const [cRes, bRes, pRes, aRes] = await Promise.all([fetch('/api/creators', adminHeader), fetch('/api/battles', adminHeader), fetch('/api/posts', adminHeader), fetch('/api/admin/audit-log')]);
       if (cRes.ok) setCreators(await cRes.json());
       if (bRes.ok) setBattles(await bRes.json());
       if (pRes.ok) setPosts(await pRes.json());
@@ -404,7 +405,7 @@ export default function Admin() {
     if (addForm.pin.length < 6) { setAddError('PIN must be at least 6 characters.'); return; }
     if (!addAgeAttested) { setAddError('Please confirm this creator is 18 or older.'); return; }
     const res = await fetch('/api/creators', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...addForm, ageAttested: true })
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Session-Role': 'admin' }, body: JSON.stringify({ ...addForm, ageAttested: true })
     });
     const data = await res.json();
     if (!res.ok) { setAddError(data.error || 'Could not add creator.'); return; }
