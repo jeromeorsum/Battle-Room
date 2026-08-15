@@ -35,10 +35,20 @@ export default async function handler(req, res) {
     const lock = await checkLock(rateKey);
     if (!lock.allowed) return res.status(429).json({ error: `Too many attempts. Try again in ${Math.ceil(lock.retryAfterSeconds / 60)} minute(s).` });
 
+    // PostgREST's .or() filter syntax uses commas to separate conditions
+    // and treats spaces/commas/parentheses as structurally significant, so
+    // a value like "Agency C Creator" silently breaks the filter unless
+    // it's wrapped in double quotes — with any existing backslash or quote
+    // in the value itself escaped first so it can't break out of that
+    // quoting. Wildcard characters are escaped too, so a literal % or _ in
+    // someone's real nickname doesn't act as an ilike wildcard.
+    const escapeForOrFilter = (value) => `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/[%_]/g, '\\$&')}"`;
+    const safeClean = escapeForOrFilter(clean);
+
     const { data: matches } = await supabaseAdmin
       .from('creators').select('id, name, agency_id, pin_hash')
       .eq('agency_id', agencyId)
-      .or(`name.ilike.${clean},handle.ilike.${clean}`);
+      .or(`name.ilike.${safeClean},handle.ilike.${safeClean}`);
 
     if (!matches || matches.length === 0) { await recordFailure(rateKey); return res.status(404).json({ error: 'No profile found with that handle/nickname.' }); }
 
