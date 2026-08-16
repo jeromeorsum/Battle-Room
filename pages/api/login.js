@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { supabaseAdmin } from '../../lib/supabaseAdmin';
-import { setSessionCookie, COOKIES } from '../../lib/session';
+import { setSessionCookie, COOKIES, pinFingerprint } from '../../lib/session';
 import { checkLock, recordFailure, recordSuccess } from '../../lib/rateLimit';
 import { isLockedOut } from '../../lib/agencyStatus';
 import { resolveAgencyId } from '../../lib/agencyScope';
@@ -68,7 +68,7 @@ export default async function handler(req, res) {
     return res.status(402).json({ error: 'This agency\u2019s account is inactive. Contact your agency admin.' });
   }
 
-  setSessionCookie(res, COOKIES.CREATOR, { creatorId: creator.id, agencyId: creator.agency_id }, 60 * 60 * 24 * 30);
+  setSessionCookie(res, COOKIES.CREATOR, { creatorId: creator.id, agencyId: creator.agency_id, pinFp: pinFingerprint(creator.pin_hash) }, 60 * 60 * 24 * 30);
   await supabaseAdmin.from('creators').update({ last_active_at: new Date().toISOString() }).eq('id', creator.id);
   return res.status(200).json({ id: creator.id, name: creator.name });
 }

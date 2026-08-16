@@ -1,5 +1,5 @@
 import { supabaseAdmin } from '../../lib/supabaseAdmin';
-import { readSession, clearSessionCookie, COOKIES } from '../../lib/session';
+import { readSession, clearSessionCookie, COOKIES, pinFingerprint } from '../../lib/session';
 import { isLockedOut } from '../../lib/agencyStatus';
 
 export default async function handler(req, res) {
@@ -8,8 +8,18 @@ export default async function handler(req, res) {
   const session = readSession(req, COOKIES.CREATOR);
   if (!session) return res.status(401).json({ error: 'Not logged in.' });
 
-  const { data: creator } = await supabaseAdmin.from('creators').select('id, name, agency_id').eq('id', session.creatorId).single();
+  const { data: creator } = await supabaseAdmin.from('creators').select('id, name, agency_id, pin_hash').eq('id', session.creatorId).single();
   if (!creator) return res.status(401).json({ error: 'Not logged in.' });
+
+  // If the PIN has changed (or an admin reset it) since this session was
+  // issued, the stamped fingerprint no longer matches the current one —
+  // force the stale session out. Sessions issued before this field existed
+  // won't carry a pinFp; those are left alone (they still expire normally)
+  // rather than logging everyone out on deploy.
+  if (session.pinFp && session.pinFp !== pinFingerprint(creator.pin_hash)) {
+    clearSessionCookie(res, COOKIES.CREATOR);
+    return res.status(401).json({ error: 'Your PIN was changed — please sign in again.' });
+  }
 
   const { data: agency } = await supabaseAdmin.from('agencies').select('id, name, agency_code, status').eq('id', creator.agency_id).single();
 

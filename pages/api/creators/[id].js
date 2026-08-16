@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
-import { readSession, COOKIES } from '../../../lib/session';
+import { readSession, setSessionCookie, COOKIES, pinFingerprint } from '../../../lib/session';
 import { logAudit } from '../../../lib/auditLog';
 
 export default async function handler(req, res) {
@@ -54,6 +54,14 @@ export default async function handler(req, res) {
       .single();
     if (error) return res.status(500).json({ error: error.message });
     if (pin && isAgencyAdmin && !isSelf) await logAudit(creator.agency_id, 'Agency admin', 'Reset PIN', data.name);
+    // If the creator changed their OWN PIN, re-stamp this device's session
+    // with the new fingerprint so they stay logged in here — while every
+    // other device they're signed in on is invalidated on its next check.
+    // (An admin resetting someone else's PIN deliberately does NOT re-stamp,
+    // so all of that creator's sessions get forced out.)
+    if (pin && isSelf) {
+      setSessionCookie(res, COOKIES.CREATOR, { creatorId: id, agencyId: creator.agency_id, pinFp: pinFingerprint(update.pin_hash) }, 60 * 60 * 24 * 30);
+    }
     return res.status(200).json(data);
   }
 
