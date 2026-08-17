@@ -37,25 +37,30 @@ export default function Landing() {
 
       <div className="card">
         <h2 style={{ textAlign: 'center' }}>Pricing</h2>
-        <p className="dim" style={{ textAlign: 'center' }}>Pricing is early and may change — reach out if you need something custom.</p>
-        <div className="row" style={{ justifyContent: 'center', marginBottom: 16 }}>
+        <p className="dim" style={{ textAlign: 'center' }}>Every plan starts with a 14-day free trial — no card required.</p>
+        <div className="row" style={{ justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
           <button className={billingPeriod === 'monthly' ? 'btn' : 'btn ghost'} onClick={() => setBillingPeriod('monthly')}>Monthly</button>
           <button className={billingPeriod === 'yearly' ? 'btn' : 'btn ghost'} onClick={() => setBillingPeriod('yearly')}>Yearly</button>
+          <span className="dim" style={{ fontSize: 12, color: 'var(--gold)' }}>Yearly = 2 months free</span>
         </div>
-        <div className="opp-grid">
+        <div className="pricing-grid">
           {PRICING_TIERS.map((t) => {
             const isCustom = !t.monthly;
             return (
-              <div key={t.id} className="card" style={isCustom ? { textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' } : undefined}>
+              <div key={t.id} className={`card pricing-card${t.popular ? ' pricing-popular' : ''}`}>
+                {t.popular && <div className="pricing-badge">Most popular</div>}
                 <h3 style={{ margin: '0 0 4px' }}>{t.label}</h3>
                 <div className="dim">{t.maxCreators ? `Up to ${t.maxCreators} creators` : 'Unlimited creators'}</div>
-                <div style={{ fontSize: isCustom ? 22 : 28, fontWeight: 800, margin: '14px 0' }}>
-                  {t.monthly ? `$${billingPeriod === 'yearly' ? t.yearly : t.monthly}` : 'Custom pricing'}
+                <div style={{ fontSize: isCustom ? 22 : 28, fontWeight: 800, margin: '14px 0 4px' }}>
+                  {t.monthly ? `$${billingPeriod === 'yearly' ? t.yearly : t.monthly}` : 'Custom'}
                   {t.monthly && <span className="dim" style={{ fontSize: 13, fontWeight: 400 }}>/{billingPeriod === 'yearly' ? 'yr' : 'mo'}</span>}
                 </div>
-                <p className="dim">{t.blurb}</p>
-                <a href="/signup" className="btn ghost" style={{ display: 'block', textAlign: 'center', textDecoration: 'none', marginTop: 8 }}>
-                  {t.monthly ? 'Get started' : 'Contact us'}
+                <div className="dim" style={{ fontSize: 12, minHeight: 16, marginBottom: 10 }}>
+                  {t.monthly && t.maxCreators ? `As low as $${(( (billingPeriod === 'yearly' ? t.yearly / 12 : t.monthly) ) / t.maxCreators).toFixed(2)}/creator` : 'Volume pricing available'}
+                </div>
+                <p className="dim" style={{ flexGrow: 1 }}>{t.blurb}</p>
+                <a href={t.monthly ? '/signup' : 'mailto:benjaminmilroy@gmail.com?subject=Battle%20Room%20Enterprise'} className={t.popular ? 'btn' : 'btn ghost'} style={{ display: 'block', textAlign: 'center', textDecoration: 'none', marginTop: 8 }}>
+                  {t.monthly ? 'Start free trial' : 'Contact us'}
                 </a>
               </div>
             );
