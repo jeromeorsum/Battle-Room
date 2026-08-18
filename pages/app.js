@@ -517,7 +517,7 @@ function LoggedOutView({ creators, agencyId, onCreate, onLogin }) {
         </div>
         <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', margin: '10px 0' }}>
           <input type="checkbox" checked={ageAttested} onChange={(e) => setAgeAttested(e.target.checked)} style={{ width: 'auto', marginTop: 3 }} />
-          <span className="dim" style={{ fontSize: 12 }}>I confirm I am 18 years of age or older. This platform is for adults only.</span>
+          <span className="dim" style={{ fontSize: 12 }}>I confirm I am 18 years of age or older, and I agree to the <a href="/tos" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--cyan)' }}>Terms of Service</a>. This platform is for adults only.</span>
         </label>
         <button className="btn" type="submit" disabled={!ageAttested || creating}>{creating ? 'Creating…' : 'Create Profile & Continue'}</button>
       </form>
