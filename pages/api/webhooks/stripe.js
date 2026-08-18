@@ -3,6 +3,7 @@ import { stripe } from '../../../lib/stripeAdmin';
 import { logError } from '../../../lib/logger';
 import { tierById } from '../../../lib/pricing';
 import { logAudit } from '../../../lib/auditLog';
+import { sendEmail } from '../../../lib/emailAdmin';
 
 // Stripe needs the raw, unparsed request body to verify the webhook
 // signature — Next.js parses JSON by default, so we turn that off here.
@@ -91,6 +92,37 @@ export default async function handler(req, res) {
               }
             }
           }
+        }
+        break;
+      }
+      case 'customer.subscription.trial_will_end': {
+        // Stripe fires this ~3 days before a trial converts to paid. Sending
+        // a reminder that names the amount, the date, and how to cancel is
+        // the FTC/Idaho-recommended practice for a free trial that
+        // auto-renews into a paid plan (notify 1–7 days before the charge).
+        const sub = event.data.object;
+        try {
+          const { data: agency } = await supabaseAdmin
+            .from('agencies').select('id, name, contact_email, plan_tier').eq('stripe_subscription_id', sub.id).single();
+          if (agency?.contact_email) {
+            const tier = tierById(agency.plan_tier);
+            const amount = tier?.monthly ? `$${tier.monthly}` : 'your plan price';
+            const chargeDate = sub.trial_end
+              ? new Date(sub.trial_end * 1000).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })
+              : 'soon';
+            await sendEmail({
+              to: agency.contact_email,
+              subject: `Your Battle Room free trial ends soon — ${amount}/month starts ${chargeDate}`,
+              html: `<p>Hi ${agency.name},</p>
+                     <p>Your 14-day Battle Room free trial is ending. Unless you cancel first, your ${tier?.label || ''} subscription will begin and your card will be charged <b>${amount}</b> on <b>${chargeDate}</b>, then ${amount} each month until you cancel.</p>
+                     <p>If you'd like to keep Battle Room, you don't need to do anything — it'll continue automatically.</p>
+                     <p>If you'd rather not be charged, you can cancel for free anytime before ${chargeDate} in your admin billing settings, or by replying to this email and asking us to cancel. Either way, cancelling during the trial means no charge.</p>
+                     <p>Thanks for trying Battle Room.</p>`
+            });
+            await logAudit(agency.id, 'System', 'Trial-ending reminder sent', `Charge of ${amount} scheduled for ${chargeDate}`);
+          }
+        } catch (err) {
+          await logError('webhook:trial_will_end', err);
         }
         break;
       }

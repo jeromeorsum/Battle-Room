@@ -70,7 +70,8 @@ create table if not exists creators (
   gender text,
   last_active_at timestamptz default now(),
   age_attested boolean default false,
-  age_attested_at timestamptz
+  age_attested_at timestamptz,
+  date_of_birth date
 );
 
 -- Scheduled PK battles between two creators in the same agency.

@@ -4,6 +4,7 @@ import Script from 'next/script';
 import { useRouter } from 'next/router';
 import * as Sentry from '@sentry/nextjs';
 import { PRICING_TIERS } from '../lib/pricing';
+import { isAdultDOB } from '../lib/age';
 import PasswordField from '../components/PasswordField';
 
 export default function Signup() {
@@ -11,6 +12,8 @@ export default function Signup() {
   const [billingPeriod, setBillingPeriod] = useState('monthly');
   const [form, setForm] = useState({ name: '', adminCode: '', managerCode: '', planTier: 'starter', contactEmail: '', contactPhone: '', referralCode: '' });
   const [ageAttested, setAgeAttested] = useState(false);
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [billingConsent, setBillingConsent] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
@@ -75,6 +78,8 @@ export default function Signup() {
     if (!form.name || !form.adminCode) { setError('Agency name and an admin code are required.'); return; }
     if (!form.contactEmail || !form.contactPhone) { setError('Contact email and phone are both required.'); return; }
     if (!ageAttested) { setError('Please confirm you are 18 or older to continue.'); return; }
+    if (!dateOfBirth) { setError('Please enter your date of birth.'); return; }
+    if (!isAdultDOB(dateOfBirth)) { setError('You must be at least 18 years old to use this platform.'); return; }
     // Fail open: only hold the user up if the widget actually loaded and is
     // simply waiting on them. If it never loaded (Cloudflare down), we let
     // the submit proceed — the backend also fails open, so real people are
@@ -87,10 +92,14 @@ export default function Signup() {
     try {
       const res = await fetch('/api/agencies', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, billingPeriod, ageAttested, turnstileToken })
+        body: JSON.stringify({ ...form, billingPeriod, ageAttested, dateOfBirth, billingConsent, turnstileToken })
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Signup failed.'); return; }
+      // Card-upfront trial: if the server returned a Stripe Checkout URL, send
+      // the user there to enter a card and start the trial. Otherwise (Stripe
+      // not configured yet) fall back to the no-card success view.
+      if (data.checkoutUrl) { window.location.href = data.checkoutUrl; return; }
       setResult(data);
     } catch (err) {
       setError('Network error — please try again.');
@@ -191,6 +200,17 @@ export default function Signup() {
           </select>
         </div>
 
+        <label className="field">
+          <span className="field-label">Date of birth</span>
+          <input
+            type="date"
+            value={dateOfBirth}
+            max={new Date().toISOString().split('T')[0]}
+            onChange={(e) => setDateOfBirth(e.target.value)}
+            style={{ colorScheme: 'dark' }}
+          />
+        </label>
+
         <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', margin: '10px 0' }}>
           <input type="checkbox" checked={ageAttested} onChange={(e) => setAgeAttested(e.target.checked)} style={{ width: 'auto', marginTop: 3 }} />
           <span className="dim" style={{ fontSize: 12 }}>I confirm I am 18 years of age or older, and I agree to the <a href="/tos" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--cyan)' }}>Terms of Service</a>. This platform is for adults only.</span>
@@ -213,8 +233,38 @@ export default function Signup() {
           </>
         )}
         {error && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{error}</p>}
-        <button className="btn" type="submit" disabled={!ageAttested || submitting}>{submitting ? 'Creating…' : 'Create Agency'}</button>
-        <p className="dim" style={{ marginTop: 10 }}>This starts a 14-day free trial. One trial per email address.</p>
+
+        {process.env.NEXT_PUBLIC_CARD_TRIAL === '1' && (() => {
+          const tier = PRICING_TIERS.find((t) => t.id === form.planTier) || PRICING_TIERS[0];
+          if (!tier.monthly) return null; // Enterprise / custom — no self-serve trial price
+          const chargeDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+            .toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+          return (
+            <div style={{ border: '1px solid var(--gold)', borderRadius: 10, padding: '12px 14px', margin: '14px 0', background: 'rgba(212,175,55,0.06)' }}>
+              <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5 }}>
+                <b>Free for 14 days, then ${tier.monthly}/month.</b> You won&apos;t be charged during your trial.
+                Unless you cancel first, your {tier.label} subscription automatically starts and your card is
+                charged <b>${tier.monthly}</b> on <b>{chargeDate}</b>, then <b>${tier.monthly} every month</b> until you cancel.
+              </p>
+              <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--dim, #9aa)' }}>
+                Cancel anytime for free, online, in your admin billing settings (the same way you signed up) — or by
+                emailing us. Cancel before {chargeDate} and you won&apos;t be charged. We&apos;ll also email you a
+                reminder before your trial ends. See the <a href="/tos" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--cyan)' }}>Terms of Service</a> for full details.
+              </p>
+              <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 12 }}>
+                <input type="checkbox" checked={billingConsent} onChange={(e) => setBillingConsent(e.target.checked)} style={{ width: 'auto', marginTop: 3 }} />
+                <span style={{ fontSize: 12 }}>
+                  I authorize Battle Room to charge my payment method <b>${tier.monthly} per month</b>, automatically and
+                  on a recurring basis, starting when my 14-day free trial ends, until I cancel. I understand I can
+                  cancel anytime for free before then and will not be charged.
+                </span>
+              </label>
+            </div>
+          );
+        })()}
+
+        <button className="btn" type="submit" disabled={!ageAttested || !dateOfBirth || (process.env.NEXT_PUBLIC_CARD_TRIAL === '1' && !billingConsent) || submitting}>{submitting ? 'Starting…' : 'Start free trial'}</button>
+        <p className="dim" style={{ marginTop: 10 }}>14-day free trial. One free trial per agency — abuse of the trial system may result in suspension.</p>
       </form>
     </div>
   );

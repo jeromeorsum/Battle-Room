@@ -3,6 +3,10 @@ import { supabaseAdmin } from '../../lib/supabaseAdmin';
 import { generateAgencyCode } from '../../lib/codes';
 import { tierById } from '../../lib/pricing';
 import { normalizeEmailForTrialCheck } from '../../lib/emailNormalize';
+import { isAdultDOB } from '../../lib/age';
+import { stripe } from '../../lib/stripeAdmin';
+import { priceIdFor } from '../../lib/priceMap';
+import { TRIAL_DAYS as TRIAL_PERIOD_DAYS } from '../../lib/trialTerms';
 import { createAuthToken } from '../../lib/authTokens';
 import { sendEmail } from '../../lib/emailAdmin';
 import { logError } from '../../lib/logger';
@@ -12,9 +16,11 @@ const TRIAL_DAYS = 14;
 export default async function handler(req, res) {
   if (req.method !== 'POST') { res.setHeader('Allow', ['POST']); return res.status(405).end(); }
 
-  const { name, adminCode, managerCode, planTier, billingPeriod, contactEmail, contactPhone, referralCode, ageAttested, turnstileToken } = req.body;
+  const { name, adminCode, managerCode, planTier, billingPeriod, contactEmail, contactPhone, referralCode, ageAttested, dateOfBirth, billingConsent, turnstileToken } = req.body;
   if (!name || !adminCode) return res.status(400).json({ error: 'Agency name and admin code are required.' });
   if (!ageAttested) return res.status(400).json({ error: 'You must confirm you are 18 or older to create an agency on this platform.' });
+  if (!dateOfBirth) return res.status(400).json({ error: 'Please enter your date of birth.' });
+  if (!isAdultDOB(dateOfBirth)) return res.status(400).json({ error: 'You must be at least 18 years old to use this platform. Please enter a valid date of birth.' });
 
   // Bot protection — only enforced once TURNSTILE_SECRET_KEY is configured.
   // This deliberately FAILS OPEN: if we have a token we ask Cloudflare to
@@ -112,7 +118,10 @@ export default async function handler(req, res) {
       trial_ends_at,
       referral_code,
       referred_by_code,
-      signup_ip
+      signup_ip,
+      age_attested: true,
+      age_attested_at: new Date().toISOString(),
+      date_of_birth: dateOfBirth
     })
     .select('id, name, agency_code, plan_tier, billing_period, status, max_creators, trial_ends_at, referral_code')
     .single();
@@ -121,6 +130,56 @@ export default async function handler(req, res) {
 
   await supabaseAdmin.from('trial_signups').insert({ normalized_email: normalizedEmail });
   await supabaseAdmin.from('trial_signups_phone').insert({ normalized_phone: normalizedPhone });
+
+  // Card-upfront free trial (auto-converts to paid). Only active once Stripe
+  // monthly pricing is configured — until then, signup keeps working as a
+  // no-card trial so nothing breaks pre-launch. When configured, we create a
+  // Stripe Checkout that requires a card, starts a 14-day trial, and lets
+  // Stripe charge automatically when the trial ends.
+  //
+  // The trial ALWAYS converts to the MONTHLY plan, never annual — annual
+  // (12+ month) auto-renewals are "extended" renewals under Idaho Code
+  // § 48-603G and carry a heavier 30–60-day pre-renewal reminder duty. Users
+  // can switch to annual later from billing. Keeping the trial monthly keeps
+  // us in the lighter-touch compliance lane.
+  let checkoutUrl = null;
+  const cardTrialOn = process.env.NEXT_PUBLIC_CARD_TRIAL === '1';
+  const monthlyPriceId = priceIdFor(tier.id, 'monthly');
+  if (cardTrialOn && monthlyPriceId) {
+    // Affirmative consent is legally required before we set up recurring
+    // billing — the frontend requires the consent checkbox, and we re-check
+    // it here so a request can't skip it.
+    if (!billingConsent) return res.status(400).json({ error: 'Please authorize the subscription charge to start your free trial.' });
+    try {
+      const customer = await stripe.customers.create({
+        email: contactEmail || undefined,
+        name,
+        metadata: { agencyId: data.id }
+      });
+      await supabaseAdmin.from('agencies').update({ stripe_customer_id: customer.id }).eq('id', data.id);
+      const origin = req.headers.origin || `https://${req.headers.host}`;
+      const checkoutSession = await stripe.checkout.sessions.create({
+        mode: 'subscription',
+        customer: customer.id,
+        payment_method_collection: 'always', // require a card even during the trial
+        line_items: [{ price: monthlyPriceId, quantity: 1 }],
+        subscription_data: {
+          trial_period_days: TRIAL_PERIOD_DAYS,
+          // If they never leave a usable card, cancel at trial end rather than
+          // silently failing to charge.
+          trial_settings: { end_behavior: { missing_payment_method: 'cancel' } }
+        },
+        success_url: `${origin}/admin?checkout=success`,
+        cancel_url: `${origin}/signup?checkout=cancel`,
+        metadata: { agencyId: data.id, planTier: tier.id, billingPeriod: 'monthly' }
+      });
+      checkoutUrl = checkoutSession.url;
+    } catch (err) {
+      await logError('signup-trial-checkout', err);
+      // Fall through — the agency still exists on a no-card trial if the
+      // checkout couldn't be created, so signup never hard-fails on Stripe.
+    }
+  }
 
   // Verify the contact email is real and reachable — it's what receives
   // billing codes, password resets, and invites, so an unverified/typo'd
@@ -140,5 +199,5 @@ export default async function handler(req, res) {
     await logError('agencies:verification-email', err);
   }
 
-  return res.status(201).json(data);
+  return res.status(201).json({ ...data, checkoutUrl });
 }

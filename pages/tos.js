@@ -55,24 +55,50 @@ export default function TOS() {
         activity that occurs under the agency&apos;s account, including
         activity by team members and creators.</p>
 
-        <h3>Payment, trials, and plan changes</h3>
-        <p>Every plan starts with a 14-day free trial, and we do not ask for a
-        card to start it. After the trial, you must subscribe to a paid plan
-        to keep using the Service; unpaid accounts become read-restricted
-        until a subscription is active.</p>
-        <p>Payments are processed by Stripe. Subscriptions renew
-        automatically — monthly or yearly, whichever you chose — until you
-        cancel. Yearly plans are billed up front at ten times the monthly
-        rate (two months free). Plan prices and creator limits are shown on
-        our pricing page at signup; each plan includes a maximum roster size,
-        and moving to a larger roster requires the corresponding plan.</p>
-        <p>All fees are exclusive of taxes, levies, or duties imposed by
-        taxing authorities. Where we are required to collect such taxes, we
-        will collect and remit them; otherwise they are your
-        responsibility.</p>
-        <p>We may change our pricing. If a price change affects an existing
-        subscription, we will give at least 30 days notice to the contact
-        email on the account before it takes effect.</p>
+        <h3>Free trial, automatic renewal, billing, and cancellation</h3>
+        <p><b>How the free trial and automatic billing work.</b> When you start
+        a subscription, you provide a valid payment method and begin a 14-day
+        free trial. <b>We do not charge you during the trial.</b> Unless you
+        cancel before the trial ends, your subscription automatically converts
+        to a paid plan and your payment method is charged the then-current
+        monthly price for your plan, and will be charged automatically on a
+        recurring monthly basis thereafter until you cancel. You may cancel at
+        any time before the trial ends to avoid being charged. The specific
+        price, the date of your first charge, and the recurring billing terms
+        are disclosed to you clearly and conspicuously on the signup screen,
+        next to where you confirm your subscription, before you provide
+        payment and give your consent.</p>
+        <p><b>Your affirmative consent.</b> By checking the consent box and
+        starting your subscription, you affirmatively agree to these
+        automatic-renewal terms: that after the free trial your payment method
+        will be charged automatically, on a recurring monthly basis, at the
+        disclosed price, until you cancel.</p>
+        <p><b>Reminder before your first charge.</b> As a courtesy and
+        consistent with applicable law, before your free trial ends and your
+        first charge occurs we send a reminder to the contact email on your
+        account, stating that the trial is ending, the amount you will be
+        charged, and the date of the charge, along with a link to cancel.</p>
+        <p><b>How to cancel — free and easy, the same way you signed up.</b>
+        You can cancel your subscription at any time, online, yourself, at no
+        cost, from the billing settings in your admin panel — the same online
+        method you used to subscribe. Cancellation is immediate and requires
+        no call, no fee, and no explanation. In addition, you may cancel at no
+        cost by emailing us at the address at the bottom of these Terms and
+        asking us to cancel; that is a second, always-available cancellation
+        method. Cancelling stops all future charges. If you cancel during the
+        free trial, you are not charged at all.</p>
+        <p><b>Payments and taxes.</b> Payments are processed by Stripe.
+        Yearly plans (where offered) are billed up front at ten times the
+        monthly rate. Plan prices and creator limits are shown on our pricing
+        page; each plan includes a maximum roster size, and moving to a larger
+        roster requires the corresponding plan. All fees are exclusive of
+        taxes, levies, or duties imposed by taxing authorities; where we are
+        required to collect such taxes we will collect and remit them,
+        otherwise they are your responsibility.</p>
+        <p><b>Price changes.</b> We may change our pricing. If a price change
+        would affect your existing subscription, we will give you at least 30
+        days notice to the contact email on your account before the new price
+        takes effect, and you may cancel before then if you do not agree.</p>
 
         <h3>Referral credits</h3>
         <p>Agencies receive a referral code they may share. When a new agency
