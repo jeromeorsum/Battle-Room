@@ -72,10 +72,12 @@ export default function Signup() {
     if (!form.name || !form.adminCode) { setError('Agency name and an admin code are required.'); return; }
     if (!form.contactEmail || !form.contactPhone) { setError('Contact email and phone are both required.'); return; }
     if (!ageAttested) { setError('Please confirm you are 18 or older to continue.'); return; }
-    if (turnstileSiteKey && !turnstileToken) {
-      setError(turnstileUnavailable
-        ? 'Verification is temporarily unavailable — please try again in a few minutes.'
-        : 'Please complete the verification check above.');
+    // Fail open: only hold the user up if the widget actually loaded and is
+    // simply waiting on them. If it never loaded (Cloudflare down), we let
+    // the submit proceed — the backend also fails open, so real people are
+    // never blocked by a third-party outage.
+    if (turnstileSiteKey && !turnstileToken && !turnstileUnavailable) {
+      setError('Please complete the verification check above.');
       return;
     }
     try {
@@ -197,7 +199,7 @@ export default function Signup() {
             <div id="turnstile-widget" style={{ margin: '10px 0' }} />
             {turnstileUnavailable && (
               <p className="dim" style={{ fontSize: 12, color: 'var(--gold)' }}>
-                The verification check is temporarily unavailable — this is on our end, not yours. Please try again in a few minutes.
+                The bot-check couldn&apos;t load right now — that&apos;s on our end, not yours. You can go ahead and create your agency anyway.
               </p>
             )}
           </>

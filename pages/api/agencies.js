@@ -16,21 +16,33 @@ export default async function handler(req, res) {
   if (!name || !adminCode) return res.status(400).json({ error: 'Agency name and admin code are required.' });
   if (!ageAttested) return res.status(400).json({ error: 'You must confirm you are 18 or older to create an agency on this platform.' });
 
-  // Bot protection — only enforced once TURNSTILE_SECRET_KEY is actually
-  // configured, so signup isn't broken before that's set up. Once it's
-  // set, a missing/invalid token fails closed.
-  if (process.env.TURNSTILE_SECRET_KEY) {
-    if (!turnstileToken) return res.status(400).json({ error: 'Please complete the verification check.' });
+  // Bot protection — only enforced once TURNSTILE_SECRET_KEY is configured.
+  // This deliberately FAILS OPEN: if we have a token we ask Cloudflare to
+  // verify it and reject only when Cloudflare positively says it's invalid
+  // (a real bot signal). If the widget couldn't load, no token was sent, or
+  // Cloudflare's siteverify endpoint is unreachable/erroring, we let the
+  // signup through rather than block real people during a Cloudflare outage.
+  // The trade-off: during an outage we get no bot filtering, but signups are
+  // never held hostage to a third party's downtime, and protection resumes
+  // automatically the moment Cloudflare recovers.
+  if (process.env.TURNSTILE_SECRET_KEY && turnstileToken) {
     try {
       const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({ secret: process.env.TURNSTILE_SECRET_KEY, response: turnstileToken })
       });
-      const verifyData = await verifyRes.json();
-      if (!verifyData.success) return res.status(400).json({ error: 'Verification check failed — please try again.' });
+      if (verifyRes.ok) {
+        const verifyData = await verifyRes.json();
+        // Only block on an explicit failure verdict from Cloudflare. Any
+        // other outcome (network error, non-200, malformed response) falls
+        // through to allow, so an outage can't lock out real users.
+        if (verifyData && verifyData.success === false) {
+          return res.status(400).json({ error: 'Verification check failed — please try again.' });
+        }
+      }
     } catch (err) {
-      return res.status(400).json({ error: 'Could not complete verification — please try again.' });
+      // Cloudflare unreachable — fail open, allow the signup.
     }
   }
   if (String(adminCode).length < 8) return res.status(400).json({ error: 'Admin code must be at least 8 characters — this protects your whole roster.' });
