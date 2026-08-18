@@ -1,6 +1,8 @@
+import Head from 'next/head';
 export default function Compliance() {
   return (
     <div className="wrap">
+      <Head><title>Compliance · Battle Room</title></Head>
       <h1>Compliance</h1>
       <p className="dim">A single place for the legal/compliance state of this platform — useful for your own reference and for whoever reviews this with a lawyer.</p>
 

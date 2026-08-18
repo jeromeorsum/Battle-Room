@@ -1,3 +1,4 @@
+import Head from 'next/head';
 // Terms of Service — structure adapted from the 37signals open-source
 // policies (https://37signals.com/policies), used under CC BY 4.0, and
 // modified to match how Battle Room actually works and to sit under
@@ -5,6 +6,7 @@
 export default function TOS() {
   return (
     <div className="wrap">
+      <Head><title>Terms of Service · Battle Room</title></Head>
       <div className="card">
         <h1>Terms of Service</h1>
         <p className="dim" style={{ marginBottom: 16 }}>Last updated: August 17, 2026</p>

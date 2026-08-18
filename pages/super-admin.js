@@ -1,7 +1,9 @@
+import Head from 'next/head';
 import { useEffect, useState } from 'react';
 import { PRICING_TIERS, tierById } from '../lib/pricing';
 import PasswordField from '../components/PasswordField';
 import { SkeletonList } from '../components/Skeleton';
+import { toast } from '../components/Notify';
 
 export default function SuperAdmin() {
   const [code, setCode] = useState('');
@@ -53,7 +55,7 @@ export default function SuperAdmin() {
     const res = await fetch('/api/super-admin/reset-creator-pin', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ creatorId, newPin })
     });
-    if (res.ok) alert(`New PIN set for ${name}.`); else alert('Could not reset PIN.');
+    if (res.ok) toast(`New PIN set for ${name}.`); else toast('Could not reset PIN.', 'error');
   }
 
   useEffect(() => { checkSession(); }, []);
@@ -126,24 +128,24 @@ export default function SuperAdmin() {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch)
     });
     if (res.ok) checkSession();
-    else alert('Update failed.');
+    else toast('Update failed.', 'error');
   }
 
   async function resetAdminCode(id, name) {
     const newCode = prompt(`Set a new admin code for ${name} (8+ characters). Tell them this code so they can log in and change it themselves.`);
     if (!newCode) return;
-    if (newCode.length < 8) { alert('Admin code must be at least 8 characters.'); return; }
+    if (newCode.length < 8) { toast('Admin code must be at least 8 characters.', 'error'); return; }
     const res = await fetch('/api/super-admin/reset-admin-code', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agencyId: id, newCode })
     });
-    if (res.ok) alert(`New admin code set for ${name}.`); else alert('Could not reset admin code.');
+    if (res.ok) toast(`New admin code set for ${name}.`); else toast('Could not reset admin code.', 'error');
   }
 
   async function deleteAgency(id, name) {
     const typed = prompt(`This permanently deletes "${name}" and everything tied to it — creators, battles, posts, logins. There is no undo.\n\nType the agency name exactly to confirm:`);
-    if (typed !== name) { if (typed !== null) alert('Name didn\u2019t match — nothing was deleted.'); return; }
+    if (typed !== name) { if (typed !== null) toast('Name didn\u2019t match — nothing was deleted.', 'error'); return; }
     const res = await fetch(`/api/super-admin/agencies/${id}`, { method: 'DELETE' });
-    if (res.ok) { alert(`${name} has been deleted.`); checkSession(); } else { alert('Could not delete the agency.'); }
+    if (res.ok) { toast(`${name} has been deleted.`); checkSession(); } else { toast('Could not delete the agency.', 'error'); }
   }
 
   if (loading) return <div className="wrap"><SkeletonList count={3} /></div>;
@@ -152,6 +154,7 @@ export default function SuperAdmin() {
     if (needs2fa) {
       return (
         <div className="wrap">
+          <Head><title>Super Admin · Battle Room</title></Head>
           <form className="card" style={{ maxWidth: 360, margin: '60px auto' }} onSubmit={submit2fa}>
             <h2>Two-Factor Code</h2>
             <p className="dim">Enter the 6-digit code from your authenticator app.</p>

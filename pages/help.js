@@ -1,3 +1,4 @@
+import Head from 'next/head';
 import { useState } from 'react';
 
 const CATEGORIES = [
@@ -59,6 +60,7 @@ export default function Help() {
 
   return (
     <div className="wrap">
+      <Head><title>Help · Battle Room</title></Head>
       <h1>Help &amp; FAQ</h1>
       <div className="field" style={{ maxWidth: 400 }}>
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search questions…" />

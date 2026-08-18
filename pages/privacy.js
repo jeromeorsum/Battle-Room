@@ -1,6 +1,8 @@
+import Head from 'next/head';
 export default function Privacy() {
   return (
     <div className="wrap">
+      <Head><title>Privacy Policy · Battle Room</title></Head>
       <div className="card">
         <h1>Privacy Policy</h1>
         <p className="dim">Last updated: August 5, 2026. This is a placeholder — like the Terms of Service, it has not been reviewed by a lawyer and should not be relied on as-is before real agencies' data is involved.</p>

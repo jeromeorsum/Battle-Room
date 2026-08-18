@@ -1,3 +1,4 @@
+import Head from 'next/head';
 import { useState } from 'react';
 
 export default function Feedback() {
@@ -19,6 +20,7 @@ export default function Feedback() {
   if (sent) {
     return (
       <div className="wrap">
+        <Head><title>Feedback · Battle Room</title></Head>
         <div className="card" style={{ maxWidth: 480, margin: '60px auto' }}>
           <h2>Thanks! 🙏</h2>
           <p className="dim">Your feedback was sent. If you're reporting a bug, that context — what you were logged in as, what you clicked — is genuinely helpful, so feel free to send a follow-up with more detail.</p>

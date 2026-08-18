@@ -1,3 +1,4 @@
+import Head from 'next/head';
 import { useEffect, useState } from 'react';
 import { ZONES, BATTLE_TYPES, LEAGUE_OPTIONS, zoneByCode } from '../lib/constants';
 import { PRICING_TIERS } from '../lib/pricing';
@@ -6,6 +7,7 @@ import PasswordField from '../components/PasswordField';
 import DateTimePicker from '../components/DateTimePicker';
 import DiamondInput from '../components/DiamondInput';
 import { SkeletonList } from '../components/Skeleton';
+import { toast, confirmModal } from '../components/Notify';
 
 export default function Admin() {
   const [agency, setAgency] = useState(null);
@@ -203,9 +205,9 @@ export default function Admin() {
   }
 
   async function removeTeamMember(id) {
-    if (!confirm('Remove this team member\u2019s access?')) return;
+    if (!(await confirmModal('Remove this team member\u2019s access?'))) return;
     const res = await fetch(`/api/agency-users/${id}`, { method: 'DELETE' });
-    if (res.ok) loadTeam(); else { const d = await res.json(); alert(d.error || 'Could not remove.'); }
+    if (res.ok) loadTeam(); else { const d = await res.json(); toast(d.error || 'Could not remove.', 'error'); }
   }
 
   async function start2faSetup() {
@@ -311,11 +313,11 @@ export default function Admin() {
 
   async function bulkRemove() {
     if (selectedIds.size === 0) return;
-    if (!confirm(`Remove ${selectedIds.size} creator(s) from the roster? This can't be undone.`)) return;
+    if (!(await confirmModal(`Remove ${selectedIds.size} creator(s) from the roster? This can't be undone.`))) return;
     const previous = creators;
     setCreators((prev) => prev.filter((c) => !selectedIds.has(c.id))); // optimistic
     const results = await Promise.all([...selectedIds].map((id) => fetch(`/api/creators/${id}`, { method: 'DELETE' })));
-    if (results.some((r) => !r.ok)) { setCreators(previous); alert('Some removals failed — please try again.'); }
+    if (results.some((r) => !r.ok)) { setCreators(previous); toast('Some removals failed — please try again.', 'error'); }
     clearSelection();
     loadRoster();
   }
@@ -336,24 +338,24 @@ export default function Admin() {
   }
 
   async function removeCreator(id, name) {
-    if (!confirm(`Remove ${name} from the roster? This can't be undone.`)) return;
+    if (!(await confirmModal(`Remove ${name} from the roster? This can't be undone.`))) return;
     const previous = creators;
     setCreators((prev) => prev.filter((c) => c.id !== id)); // optimistic
     const res = await fetch(`/api/creators/${id}`, { method: 'DELETE' });
-    if (!res.ok) { setCreators(previous); alert('Could not remove creator.'); return; }
+    if (!res.ok) { setCreators(previous); toast('Could not remove creator.', 'error'); return; }
     loadRoster();
   }
 
   async function resetCreatorPin(id, name) {
     const newPin = prompt(`Set a new temporary PIN for ${name} (6+ characters). Tell them this PIN so they can log in and change it themselves.`);
     if (!newPin) return;
-    if (newPin.length < 6) { alert('PIN must be at least 6 characters.'); return; }
+    if (newPin.length < 6) { toast('PIN must be at least 6 characters.', 'error'); return; }
     const creator = creators.find((c) => c.id === id);
     const res = await fetch(`/api/creators/${id}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: creator.name, handle: creator.handle, diamonds: creator.diamonds, league: creator.league, tz: creator.tz, tags: creator.tags, pin: newPin })
     });
-    if (res.ok) alert(`New PIN set for ${name}.`); else alert('Could not reset PIN.');
+    if (res.ok) toast(`New PIN set for ${name}.`); else toast('Could not reset PIN.', 'error');
   }
 
   async function removePost(id) {
@@ -416,13 +418,13 @@ export default function Admin() {
 
   async function bookBattle(e) {
     if (e) e.preventDefault();
-    if (!bookForm.a || !bookForm.b || bookForm.a === bookForm.b || !bookForm.datetime) { alert('Pick two different creators and a time.'); return; }
+    if (!bookForm.a || !bookForm.b || bookForm.a === bookForm.b || !bookForm.datetime) { toast('Pick two different creators and a time.', 'error'); return; }
     const res = await fetch('/api/battles', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ creatorA: bookForm.a, creatorB: bookForm.b, localDateTime: bookForm.datetime, zoneCode: bookForm.tz, notes: bookForm.notes })
     });
     if (res.ok) { loadRoster(); setBookForm({ a: '', b: '', datetime: '', tz: 'ET', notes: '' }); }
-    else { const d = await res.json(); alert(d.error || 'Could not book battle.'); }
+    else { const d = await res.json(); toast(d.error || 'Could not book battle.', 'error'); }
   }
 
   // Billing now requires a step-up verification code (emailed to the
@@ -436,9 +438,9 @@ export default function Admin() {
     try {
       const res = await fetch('/api/billing/request-code', { method: 'POST' });
       const data = await res.json();
-      if (!res.ok) { alert(data.error || 'Could not send verification code.'); setPendingBilling(null); setBillingLoading(false); return; }
+      if (!res.ok) { toast(data.error || 'Could not send verification code.', 'error'); setPendingBilling(null); setBillingLoading(false); return; }
       setBillingCodeSent(true);
-    } catch (e) { alert('Network error.'); setPendingBilling(null); }
+    } catch (e) { toast('Network error.', 'error'); setPendingBilling(null); }
     setBillingLoading(false);
   }
 
@@ -453,10 +455,10 @@ export default function Admin() {
       const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       let data;
       try { data = await res.json(); }
-      catch (parseErr) { alert('The server sent back an unexpected response. This usually means Stripe isn\u2019t connected yet — see STRIPE_SETUP.md.'); setBillingLoading(false); return; }
-      if (!res.ok) { alert(data.error || 'Could not continue.'); setBillingLoading(false); return; }
+      catch (parseErr) { toast('The server sent back an unexpected response. This usually means Stripe isn\u2019t connected yet.', 'error'); setBillingLoading(false); return; }
+      if (!res.ok) { toast(data.error || 'Could not continue.', 'error'); setBillingLoading(false); return; }
       window.location.href = data.url;
-    } catch (e) { alert('Could not reach the server — check your internet connection and try again.'); setBillingLoading(false); }
+    } catch (e) { toast('Could not reach the server — check your internet connection and try again.', 'error'); setBillingLoading(false); }
   }
 
   function cancelBilling() { setPendingBilling(null); setBillingCodeSent(false); setBillingCode(''); setBillingLoading(false); }
@@ -487,7 +489,7 @@ export default function Admin() {
       catch (e) { /* user cancelled the share sheet — fall through to copy */ }
     }
     navigator.clipboard.writeText(text);
-    alert('Link copied — paste it wherever you\u2019d like to send it.');
+    toast('Link copied — paste it wherever you\u2019d like to send it.');
   }
 
   function focusNext(e) {
@@ -508,6 +510,7 @@ export default function Admin() {
     if (needs2fa) {
       return (
         <div className="wrap">
+          <Head><title>Admin · Battle Room</title></Head>
           <form className="card" style={{ maxWidth: 380, margin: '60px auto' }} onSubmit={submit2fa}>
             <h2>Two-Factor Code</h2>
             <p className="dim">Enter the 6-digit code from your authenticator app.</p>

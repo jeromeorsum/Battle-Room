@@ -1,3 +1,4 @@
+import Head from 'next/head';
 import { useEffect, useState } from 'react';
 import Script from 'next/script';
 import { useRouter } from 'next/router';
@@ -16,6 +17,7 @@ export default function Signup() {
   const [copiedReferral, setCopiedReferral] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState('');
   const [turnstileUnavailable, setTurnstileUnavailable] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
   function reportTurnstileUnavailable(reason) {
@@ -68,6 +70,7 @@ export default function Signup() {
 
   async function submit(e) {
     if (e) e.preventDefault();
+    if (submitting) return; // guard against double-clicks creating duplicate agencies/customers
     setError('');
     if (!form.name || !form.adminCode) { setError('Agency name and an admin code are required.'); return; }
     if (!form.contactEmail || !form.contactPhone) { setError('Contact email and phone are both required.'); return; }
@@ -80,6 +83,7 @@ export default function Signup() {
       setError('Please complete the verification check above.');
       return;
     }
+    setSubmitting(true);
     try {
       const res = await fetch('/api/agencies', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -90,6 +94,8 @@ export default function Signup() {
       setResult(data);
     } catch (err) {
       setError('Network error — please try again.');
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -119,6 +125,7 @@ export default function Signup() {
     const trialEnd = result.trial_ends_at ? new Date(result.trial_ends_at).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) : null;
     return (
       <div className="wrap">
+        <Head><title>Sign Up · Battle Room</title></Head>
         <div className="card" style={{ maxWidth: 480, margin: '60px auto' }}>
           <h2>You're set up 🎉</h2>
           {trialEnd && <p className="dim">Your 14-day free trial runs through <b style={{ color: 'var(--gold)' }}>{trialEnd}</b>.</p>}
@@ -205,7 +212,7 @@ export default function Signup() {
           </>
         )}
         {error && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{error}</p>}
-        <button className="btn" type="submit" disabled={!ageAttested}>Create Agency</button>
+        <button className="btn" type="submit" disabled={!ageAttested || submitting}>{submitting ? 'Creating…' : 'Create Agency'}</button>
         <p className="dim" style={{ marginTop: 10 }}>This starts a 14-day free trial. One trial per email address.</p>
       </form>
     </div>

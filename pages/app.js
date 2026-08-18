@@ -1,3 +1,4 @@
+import Head from 'next/head';
 import { useEffect, useState } from 'react';
 import { ZONES, BATTLE_TYPES, LEAGUE_OPTIONS, zoneByCode } from '../lib/constants';
 import { enablePushNotifications, disablePushNotifications } from '../lib/pushClient';
@@ -8,6 +9,7 @@ import PasswordField from '../components/PasswordField';
 import DateTimePicker from '../components/DateTimePicker';
 import DiamondInput from '../components/DiamondInput';
 import InstallPrompt from '../components/InstallPrompt';
+import { toast, confirmModal } from '../components/Notify';
 import { SkeletonList } from '../components/Skeleton';
 import QuickSearch from '../components/QuickSearch';
 
@@ -99,7 +101,7 @@ export default function Home() {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, agencyCode: agency.code })
     });
     const created = await res.json();
-    if (!res.ok) { alert(created.error || 'Could not create profile.'); return; }
+    if (!res.ok) { toast(created.error || 'Could not create profile.', 'error'); return; }
     if (agency) localStorage.setItem(`battleroom-last-handle-${agency.id}`, created.name);
     setMyId(created.id);
     if (avatarFile) {
@@ -136,6 +138,7 @@ export default function Home() {
   if (!agency) {
     return (
       <div className="wrap">
+        <Head><title>Live Schedule · Battle Room</title></Head>
         <h1>BATTLE ROOM</h1>
         <form className="card" style={{ maxWidth: 380 }} onSubmit={joinAgency}>
           <h2>Enter your agency code</h2>
@@ -202,7 +205,7 @@ function PushReminder() {
   async function enable() {
     setBusy(true);
     try { await enablePushNotifications(); setStatus('granted'); }
-    catch (e) { alert(e.message); }
+    catch (e) { toast(e.message, 'error'); }
     setBusy(false);
   }
 
@@ -302,7 +305,7 @@ function ProfileStep({ me, creators, agencyId, onCreate, onLogin, onSaved }) {
       method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form)
     });
     const data = await res.json();
-    if (res.ok) { onSaved(); setForm((f) => ({ ...f, pin: '', currentPin: '' })); alert('Saved.'); }
+    if (res.ok) { onSaved(); setForm((f) => ({ ...f, pin: '', currentPin: '' })); toast('Saved.'); }
     else { setSaveError(data.error || 'Save failed.'); }
   }
 
@@ -402,6 +405,20 @@ function LoggedOutView({ creators, agencyId, onCreate, onLogin }) {
   const [createForm, setCreateForm] = useState({ name: '', handle: '', diamonds: 0, league: '', tz: 'ET', tags: [], gender: '', pin: '' });
   const [pendingAvatarFile, setPendingAvatarFile] = useState(null);
   const [ageAttested, setAgeAttested] = useState(false);
+  const [creating, setCreating] = useState(false);
+
+  async function handleCreate(e) {
+    e.preventDefault();
+    if (creating) return; // guard against double-submit
+    if (!createForm.name || !createForm.pin) { toast('Nickname and PIN are required.', 'error'); return; }
+    if (!ageAttested) { toast('Please confirm you are 18 or older to continue.', 'error'); return; }
+    setCreating(true);
+    try {
+      await onCreate({ ...createForm, ageAttested }, pendingAvatarFile);
+    } finally {
+      setCreating(false);
+    }
+  }
 
   function toggleTag(key) {
     setCreateForm((f) => ({ ...f, tags: f.tags.includes(key) ? f.tags.filter((t) => t !== key) : [...f.tags, key] }));
@@ -444,7 +461,7 @@ function LoggedOutView({ creators, agencyId, onCreate, onLogin }) {
         </a>
       </div>
       <p className="dim" style={{ marginTop: 6 }}>Once you create your profile, this browser will remember you for 30 days.</p>
-      <form onKeyDown={focusNext} onSubmit={(e) => { e.preventDefault(); if (!createForm.name || !createForm.pin) { alert('Nickname and PIN are required.'); return; } if (!ageAttested) { alert('Please confirm you are 18 or older to continue.'); return; } onCreate({ ...createForm, ageAttested }, pendingAvatarFile); }}>
+      <form onKeyDown={focusNext} onSubmit={handleCreate}>
         <div className="field">
           <label>Profile picture (optional)</label>
           <div className="row" style={{ alignItems: 'center' }}>
@@ -502,7 +519,7 @@ function LoggedOutView({ creators, agencyId, onCreate, onLogin }) {
           <input type="checkbox" checked={ageAttested} onChange={(e) => setAgeAttested(e.target.checked)} style={{ width: 'auto', marginTop: 3 }} />
           <span className="dim" style={{ fontSize: 12 }}>I confirm I am 18 years of age or older. This platform is for adults only.</span>
         </label>
-        <button className="btn" type="submit" disabled={!ageAttested}>Create Profile &amp; Continue</button>
+        <button className="btn" type="submit" disabled={!ageAttested || creating}>{creating ? 'Creating…' : 'Create Profile & Continue'}</button>
       </form>
     </div>
   );
@@ -639,9 +656,9 @@ function BoardStep({ me }) {
   }
 
   async function report(id) {
-    if (!confirm('Report this post to your agency admin?')) return;
+    if (!(await confirmModal('Report this post to your agency admin?'))) return;
     await fetch(`/api/posts/${id}`, { method: 'PATCH' });
-    alert('Reported.');
+    toast('Reported.');
     load();
   }
 
@@ -730,6 +747,7 @@ function exportBattlesCSV(battles, nameOf) {
 
 function BattlesStep({ me, creators, battles, onChange, onFindOpponent }) {
   const [form, setForm] = useState({ opponent: '', datetime: '', tz: me.tz, notes: '' });
+  const [sending, setSending] = useState(false);
   const nameOf = (id) => creators.find((c) => c.id === id)?.name || 'Unknown';
   const handleOf = (id) => creators.find((c) => c.id === id)?.handle || '';
   const [optimisticPatches, setOptimisticPatches] = useState({}); // id -> partial patch
@@ -749,13 +767,19 @@ function BattlesStep({ me, creators, battles, onChange, onFindOpponent }) {
 
   async function sendInvite(e) {
     if (e) e.preventDefault();
-    if (!form.opponent || !form.datetime) { alert('Pick an opponent and a time.'); return; }
-    const res = await fetch('/api/battles', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ creatorA: me.id, creatorB: form.opponent, localDateTime: form.datetime, zoneCode: form.tz, notes: form.notes })
-    });
-    if (res.ok) { setForm({ opponent: '', datetime: '', tz: me.tz, notes: '' }); onChange(); }
-    else { const d = await res.json(); alert(d.error || 'Could not send invite.'); }
+    if (sending) return; // guard against double-submit creating duplicate invites
+    if (!form.opponent || !form.datetime) { toast('Pick an opponent and a time.', 'error'); return; }
+    setSending(true);
+    try {
+      const res = await fetch('/api/battles', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ creatorA: me.id, creatorB: form.opponent, localDateTime: form.datetime, zoneCode: form.tz, notes: form.notes })
+      });
+      if (res.ok) { setForm({ opponent: '', datetime: '', tz: me.tz, notes: '' }); onChange(); }
+      else { const d = await res.json(); toast(d.error || 'Could not send invite.', 'error'); }
+    } finally {
+      setSending(false);
+    }
   }
 
   async function respond(id, action) {
@@ -775,7 +799,7 @@ function BattlesStep({ me, creators, battles, onChange, onFindOpponent }) {
   }
 
   async function sendRebuttal(originalBattle, opponentId, datetime, tz) {
-    if (!datetime) { alert('Pick a time first.'); return; }
+    if (!datetime) { toast('Pick a time first.', 'error'); return; }
     // Decline the original, then send a fresh invite back the other way
     // with the new proposed time — a "counter-offer" instead of a flat no.
     await fetch(`/api/battles/${originalBattle.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'decline' }) });
@@ -783,7 +807,7 @@ function BattlesStep({ me, creators, battles, onChange, onFindOpponent }) {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ creatorA: me.id, creatorB: opponentId, localDateTime: datetime, zoneCode: tz, notes: 'Rebuttal — proposed a different time' })
     });
-    if (!res.ok) { const d = await res.json(); alert(d.error || 'Could not send rebuttal.'); }
+    if (!res.ok) { const d = await res.json(); toast(d.error || 'Could not send rebuttal.', 'error'); }
     onChange();
   }
 
@@ -807,7 +831,7 @@ function BattlesStep({ me, creators, battles, onChange, onFindOpponent }) {
         <div className="field"><label>Date &amp; Time (your local time)</label>
           <DateTimePicker value={form.datetime} onChange={(v) => setForm({ ...form, datetime: v })} />
         </div>
-        <button className="btn" type="submit">Send Invite</button>
+        <button className="btn" type="submit" disabled={sending}>{sending ? 'Sending…' : 'Send Invite'}</button>
       </form>
 
       {needsResponse.length > 0 && <h3>Needs Your Response</h3>}

@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/react';
 import * as Sentry from '@sentry/nextjs';
 import '../styles/globals.css';
 import NavMenu from '../components/NavMenu';
+import { NotifyHost } from '../components/Notify';
 import { TOS_VERSION } from '../lib/tosVersion';
 
 class ErrorBoundary extends Component {
@@ -57,6 +58,7 @@ export default function App({ Component, pageProps }) {
         <Component {...pageProps} />
       </ErrorBoundary>
       <Analytics />
+      <NotifyHost />
       {!acknowledged && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,10,15,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 16 }}>
           <div className="card" style={{ maxWidth: 420 }}>

@@ -1,3 +1,4 @@
+import Head from 'next/head';
 import { useEffect, useState } from 'react';
 import { SkeletonList } from '../components/Skeleton';
 
@@ -32,6 +33,7 @@ export default function Roadmap() {
 
   return (
     <div className="wrap">
+      <Head><title>Roadmap · Battle Room</title></Head>
       <h1>Roadmap</h1>
       <p className="dim">Vote for what you'd like to see next — the most-voted ideas get built first.</p>
       {loading ? <SkeletonList count={4} /> : items.map((item) => (
