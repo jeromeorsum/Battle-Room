@@ -687,7 +687,7 @@ export default function Admin() {
             <p className="dim">Add someone directly — give them the starting PIN so they can log in and change it themselves later.</p>
             <div className="row">
               <div className="field" style={{ flex: 1 }}><label>Nickname</label><input value={addForm.name} onChange={(e) => setAddForm({ ...addForm, name: e.target.value })} /></div>
-              <div className="field" style={{ flex: 1 }}><label>TikTok Handle</label><input value={addForm.handle} onChange={(e) => setAddForm({ ...addForm, handle: e.target.value })} placeholder="no @ needed" /></div>
+              <div className="field" style={{ flex: 1 }}><label>Handle</label><input value={addForm.handle} onChange={(e) => setAddForm({ ...addForm, handle: e.target.value })} placeholder="no @ needed" /></div>
               <div className="field" style={{ flex: 1 }}><label>Diamonds (30d)</label>
                 <DiamondInput value={addForm.diamonds} onChange={(v) => setAddForm({ ...addForm, diamonds: v })} />
               </div>

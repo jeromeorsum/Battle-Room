@@ -12,6 +12,7 @@ import { SkeletonList } from '../components/Skeleton';
 import QuickSearch from '../components/QuickSearch';
 
 function tzLabel(code) { return zoneByCode(code).code; }
+
 function tiktokUrl(handle) { return 'https://www.tiktok.com/@' + (handle || '').replace(/^@/, ''); }
 
 export default function Home() {
@@ -332,7 +333,7 @@ function ProfileStep({ me, creators, agencyId, onCreate, onLogin, onSaved }) {
         <AvatarUploader me={{ ...me, avatar_url: avatarUrl }} onUploaded={setAvatarUrl} />
         <div className="row">
           <div className="field" style={{ flex: 1 }}><label>Nickname</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-          <div className="field" style={{ flex: 1 }}><label>TikTok Handle</label><input value={form.handle} onChange={(e) => setForm({ ...form, handle: e.target.value })} placeholder="e.g. miachen.live (no @ needed)" />
+          <div className="field" style={{ flex: 1 }}><label>Handle</label><input value={form.handle} onChange={(e) => setForm({ ...form, handle: e.target.value })} placeholder="e.g. miachen.live (no @ needed)" />
             <div className="dim">No need to include the @ — just the handle itself.</div>
           </div>
         </div>
@@ -418,7 +419,7 @@ function LoggedOutView({ creators, agencyId, onCreate, onLogin }) {
     return (
       <div className="card">
         <h2>Sign In</h2>
-        <p className="dim">Enter your nickname or TikTok handle and your PIN. This browser will remember you for 30 days after you sign in.</p>
+        <p className="dim">Enter your nickname or handle and your PIN. This browser will remember you for 30 days after you sign in.</p>
         <form onKeyDown={focusNext} onSubmit={submitSignIn}>
           <div className="field"><label>Nickname or Handle</label><input value={signIn.identifier} onChange={(e) => setSignIn({ ...signIn, identifier: e.target.value })} autoFocus /></div>
           <div className="field"><label>PIN</label>
@@ -457,7 +458,7 @@ function LoggedOutView({ creators, agencyId, onCreate, onLogin }) {
         </div>
         <div className="row">
           <div className="field" style={{ flex: 1 }}><label>Nickname</label><input value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} /></div>
-          <div className="field" style={{ flex: 1 }}><label>TikTok Handle</label><input value={createForm.handle} onChange={(e) => setCreateForm({ ...createForm, handle: e.target.value })} placeholder="e.g. miachen.live (no @ needed)" />
+          <div className="field" style={{ flex: 1 }}><label>Handle</label><input value={createForm.handle} onChange={(e) => setCreateForm({ ...createForm, handle: e.target.value })} placeholder="e.g. miachen.live (no @ needed)" />
             <div className="dim">No need to include the @ — just the handle itself.</div>
           </div>
         </div>
@@ -817,9 +818,9 @@ function BattlesStep({ me, creators, battles, onChange, onFindOpponent }) {
       {waiting.length > 0 && <h3>Waiting on a Response</h3>}
       {waiting.map((b) => (
         <div key={b.id} className="vs">
-          <div className="side">{nameOf(b.creator_a)}</div>
+          <div className="side">{nameOf(b.creator_a)}<br /><a className="dim" href={tiktokUrl(handleOf(b.creator_a))} target="_blank" rel="noopener noreferrer">TikTok ↗</a></div>
           <div className="mid">VS</div>
-          <div className="side b">{nameOf(b.creator_b)}</div>
+          <div className="side b">{nameOf(b.creator_b)}<br /><a className="dim" href={tiktokUrl(handleOf(b.creator_b))} target="_blank" rel="noopener noreferrer">TikTok ↗</a></div>
           <div className="vs-actions"><button className="btn ghost" onClick={() => remove(b.id)}>Cancel invite</button></div>
         </div>
       ))}
@@ -850,10 +851,10 @@ function BattlesStep({ me, creators, battles, onChange, onFindOpponent }) {
             <div className="dim">{new Date(b.datetime_utc).toLocaleString()}</div>
             <div className="row" style={{ marginTop: 8 }}>
               <button className="btn ghost" style={{ fontSize: 12, padding: '6px 10px' }} onClick={() => downloadICS({
-                id: b.id, title: `${nameOf(b.creator_a)} vs ${nameOf(b.creator_b)} — TikTok LIVE Battle`, notes: b.notes, startUTC: b.datetime_utc
+                id: b.id, title: `${nameOf(b.creator_a)} vs ${nameOf(b.creator_b)} — Live Battle`, notes: b.notes, startUTC: b.datetime_utc
               })}>＋ Add to Calendar</button>
               <a className="btn ghost" style={{ fontSize: 12, padding: '6px 10px', textDecoration: 'none', display: 'inline-block' }} target="_blank" rel="noopener noreferrer"
-                href={googleCalendarUrl({ title: `${nameOf(b.creator_a)} vs ${nameOf(b.creator_b)} — TikTok LIVE Battle`, notes: b.notes, startUTC: b.datetime_utc })}>
+                href={googleCalendarUrl({ title: `${nameOf(b.creator_a)} vs ${nameOf(b.creator_b)} — Live Battle`, notes: b.notes, startUTC: b.datetime_utc })}>
                 ＋ Google Calendar
               </a>
               <button className="btn ghost" style={{ fontSize: 12, padding: '6px 10px' }} onClick={() => shareOrDownloadBattleCard({
@@ -871,9 +872,9 @@ function BattlesStep({ me, creators, battles, onChange, onFindOpponent }) {
           <h3 style={{ marginTop: 24 }}>Past Battles</h3>
           {pastConfirmed.map((b) => (
             <div key={b.id} className="vs" style={{ opacity: 0.75 }}>
-              <div className="side">{nameOf(b.creator_a)}</div>
+              <div className="side">{nameOf(b.creator_a)}<br /><a className="dim" href={tiktokUrl(handleOf(b.creator_a))} target="_blank" rel="noopener noreferrer">TikTok ↗</a></div>
               <div className="mid">VS</div>
-              <div className="side b">{nameOf(b.creator_b)}</div>
+              <div className="side b">{nameOf(b.creator_b)}<br /><a className="dim" href={tiktokUrl(handleOf(b.creator_b))} target="_blank" rel="noopener noreferrer">TikTok ↗</a></div>
               <div className="vs-actions">
                 <div className="dim">{new Date(b.datetime_utc).toLocaleString()}</div>
               </div>

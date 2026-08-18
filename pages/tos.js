@@ -22,12 +22,13 @@ export default function TOS() {
 
         <h3>Definitions</h3>
         <p>&quot;Company&quot;, &quot;we&quot;, &quot;our&quot;, or
-        &quot;us&quot; refers to Goat Gaming LLC, an Idaho limited liability
-        company, which owns and operates Battle Room.</p>
+        &quot;us&quot; refers to the operator of Battle Room, based in the
+        State of Idaho. If a legal entity is formed to operate Battle Room,
+        these Terms apply to that entity as the operator.</p>
         <p>&quot;Service&quot; refers to the Battle Room website and
         application — including the agency admin panel, the creator app, and
         any related pages we operate — used for scheduling and coordinating
-        TikTok LIVE battles between creators within an agency.</p>
+        live battles between creators within an agency.</p>
         <p>&quot;You&quot; or &quot;your&quot; refers to the person or
         organization that owns an agency account, and where context requires,
         to team members and creators using the Service under that agency.</p>
@@ -112,7 +113,7 @@ export default function TOS() {
 
         <h3>Acceptable use</h3>
         <p>You agree to use Battle Room only for organizing and coordinating
-        TikTok LIVE battles and managing your own agency&apos;s roster. You
+        live battles and managing your own agency&apos;s roster. You
         must not use the Service to harass anyone, post unlawful or abusive
         content, attempt to compromise the platform or other users&apos;
         accounts, probe or test the isolation between agencies, or interfere

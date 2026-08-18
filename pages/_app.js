@@ -50,7 +50,7 @@ export default function App({ Component, pageProps }) {
   return (
     <>
       <Head>
-        <title>Battle Room — TikTok Creator Battles for Agencies</title>
+        <title>Battle Room — Live Creator Battles for Agencies</title>
       </Head>
       <NavMenu />
       <ErrorBoundary>

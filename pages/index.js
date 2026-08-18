@@ -13,7 +13,7 @@ export default function Landing() {
     <div className="wrap">
       <header style={{ textAlign: 'center', margin: '40px 0' }}>
         <h1 style={{ fontSize: 44 }}>BATTLE ROOM</h1>
-        <p className="dim" style={{ fontSize: 16 }}>Schedule TikTok LIVE PK battles across your whole agency — matched by diamonds, league, and timezone.</p>
+        <p className="dim" style={{ fontSize: 16 }}>Schedule live PK battles across your whole agency — matched by diamonds, league, and timezone.</p>
         <div className="row" style={{ justifyContent: 'center', marginTop: 16 }}>
           <a href="/signup" className="btn" style={{ textDecoration: 'none' }}>Start your agency's trial</a>
           <a href="/app" className="btn ghost" style={{ textDecoration: 'none' }}>I have an agency code</a>

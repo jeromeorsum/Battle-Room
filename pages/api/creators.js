@@ -75,7 +75,7 @@ export default async function handler(req, res) {
           // to lift the block — clear it and let this go through.
           await supabaseAdmin.from('removed_creators').delete().eq('agency_id', agencyId).eq('normalized_handle', normalized_handle);
         } else {
-          return res.status(403).json({ error: 'This TikTok handle was removed from this agency. Ask your agency admin to re-add you.' });
+          return res.status(403).json({ error: 'This handle was removed from this agency. Ask your agency admin to re-add you.' });
         }
       }
     }

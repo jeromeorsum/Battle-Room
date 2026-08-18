@@ -15,9 +15,9 @@ const CATEGORIES = [
     faqs: [
       { q: 'I forgot my PIN. What do I do?', a: 'Ask your agency admin to reset it for you — they can do this from the Roster section in /admin without needing your old PIN.' },
       { q: 'I\u2019m an admin and forgot my admin code. What do I do?', a: 'On the /admin login screen, click "Forgot your admin code?" and enter your agency code plus the contact email on file — you\u2019ll get a reset link by email.' },
-      { q: 'Why can\u2019t I create a new profile with my old TikTok handle?', a: 'If your agency removed you, your handle is blocked from self-signing-up again — this stops someone from silently rejoining after being removed. Ask your agency admin to explicitly re-add you; that automatically lifts the block.' },
-      { q: 'I changed my TikTok handle — can I update it?', a: 'Yes, go to the Profile tab any time and update it. No need to include the @ symbol.' },
-      { q: 'Can two creators in the same agency have the same TikTok handle?', a: 'Nothing technically stops it, but it\u2019s not recommended — it makes signing back in confusing since sign-in matches by handle or nickname.' }
+      { q: 'Why can\u2019t I create a new profile with my old handle?', a: 'If your agency removed you, your handle is blocked from self-signing-up again — this stops someone from silently rejoining after being removed. Ask your agency admin to explicitly re-add you; that automatically lifts the block.' },
+      { q: 'I changed my handle — can I update it?', a: 'Yes, go to the Profile tab any time and update it. No need to include the @ symbol.' },
+      { q: 'Can two creators in the same agency have the same handle?', a: 'Nothing technically stops it, but it\u2019s not recommended — it makes signing back in confusing since sign-in matches by handle or nickname.' }
     ]
   },
   {

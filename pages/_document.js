@@ -15,15 +15,15 @@ export default function Document() {
 
         {/* Default social preview tags — individual pages can override any
             of these with their own <Head> (e.g. a page-specific title). */}
-        <meta name="description" content="Battle Room — book and manage TikTok creator battles for your agency, all in one place." />
+        <meta name="description" content="Battle Room — book and manage live creator battles for your agency, all in one place." />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Battle Room" />
         <meta property="og:title" content="Battle Room" />
-        <meta property="og:description" content="Book and manage TikTok creator battles for your agency, all in one place." />
+        <meta property="og:description" content="Book and manage live creator battles for your agency, all in one place." />
         <meta property="og:image" content="https://battle-room.vercel.app/icon-192.png" />
         <meta name="twitter:card" content="summary" />
         <meta name="twitter:title" content="Battle Room" />
-        <meta name="twitter:description" content="Book and manage TikTok creator battles for your agency, all in one place." />
+        <meta name="twitter:description" content="Book and manage live creator battles for your agency, all in one place." />
         <meta name="twitter:image" content="https://battle-room.vercel.app/icon-192.png" />
       </Head>
       <body>
