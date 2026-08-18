@@ -273,6 +273,7 @@ export default function SuperAdmin() {
         const price = tier.monthly ? `$${a.billing_period === 'yearly' ? tier.yearly : tier.monthly}/${a.billing_period === 'yearly' ? 'yr' : 'mo'}` : 'Custom';
         return (
           <div key={a.id} className="card">
+            <Head><title>Super Admin · Battle Room</title></Head>
             <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
               <div>
                 <b>{a.name}</b> <span className="dim">({a.agency_code})</span>

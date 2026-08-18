@@ -813,6 +813,7 @@ function BattlesStep({ me, creators, battles, onChange, onFindOpponent }) {
 
   return (
     <div>
+      <Head><title>Live Schedule · Battle Room</title></Head>
       <form className="card" onSubmit={sendInvite} onKeyDown={focusNext}>
         <h2>Invite Someone to Battle</h2>
         <div className="row">

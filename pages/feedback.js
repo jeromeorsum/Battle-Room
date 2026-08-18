@@ -31,6 +31,7 @@ export default function Feedback() {
 
   return (
     <div className="wrap">
+      <Head><title>Feedback · Battle Room</title></Head>
       <h1>Send Feedback</h1>
       <form className="card" style={{ maxWidth: 480 }} onSubmit={submit}>
         <p className="dim">Found a bug, or have an idea? Tell us here — it goes straight to the team.</p>

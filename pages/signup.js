@@ -160,6 +160,7 @@ export default function Signup() {
 
   return (
     <div className="wrap">
+      <Head><title>Sign Up · Battle Room</title></Head>
       <h1>Set up your agency</h1>
       <p className="dim">Start with a 14-day free trial — no card required until you're ready to subscribe.</p>
       <form className="card" style={{ maxWidth: 480 }} onSubmit={submit}>

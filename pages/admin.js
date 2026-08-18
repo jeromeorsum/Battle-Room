@@ -837,6 +837,7 @@ export default function Admin() {
               const status = b.declined ? 'Declined' : (b.accepted_a && b.accepted_b) ? 'Confirmed' : 'Pending';
               return (
                 <div key={b.id} className="vs">
+                  <Head><title>Admin · Battle Room</title></Head>
                   <div className="side">{a ? a.name : '?'}</div>
                   <div className="mid">VS</div>
                   <div className="side b">{bb ? bb.name : '?'}</div>
