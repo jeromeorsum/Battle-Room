@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   const session = readSession(req, COOKIES.CREATOR);
   if (!session) return res.status(401).json({ error: 'Not logged in.' });
 
-  const { data: creator } = await supabaseAdmin.from('creators').select('id, name, agency_id, pin_hash').eq('id', session.creatorId).single();
+  const { data: creator } = await supabaseAdmin.from('creators').select('id, name, agency_id, pin_hash, age_self_confirmed').eq('id', session.creatorId).single();
   if (!creator) return res.status(401).json({ error: 'Not logged in.' });
 
   // If the PIN has changed (or an admin reset it) since this session was
@@ -31,5 +31,5 @@ export default async function handler(req, res) {
     return res.status(402).json({ error: 'This agency\u2019s account is inactive.' });
   }
 
-  return res.status(200).json({ creatorId: creator.id, name: creator.name, agencyId: creator.agency_id, agencyName: agency ? agency.name : '', agencyCode: agency ? agency.agency_code : '' });
+  return res.status(200).json({ creatorId: creator.id, name: creator.name, agencyId: creator.agency_id, agencyName: agency ? agency.name : '', agencyCode: agency ? agency.agency_code : '', needsAgeConfirmation: !creator.age_self_confirmed });
 }

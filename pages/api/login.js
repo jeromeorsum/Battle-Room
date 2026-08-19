@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     const rateKey = `creator:${creatorId}`;
     const lock = await checkLock(rateKey);
     if (!lock.allowed) return res.status(429).json({ error: `Too many attempts. Try again in ${Math.ceil(lock.retryAfterSeconds / 60)} minute(s).` });
-    const { data, error } = await supabaseAdmin.from('creators').select('id, name, agency_id, pin_hash').eq('id', creatorId).single();
+    const { data, error } = await supabaseAdmin.from('creators').select('id, name, agency_id, pin_hash, age_self_confirmed').eq('id', creatorId).single();
     if (error || !data) { await recordFailure(rateKey); return res.status(404).json({ error: 'Profile not found.' }); }
     const ok = await bcrypt.compare(String(pin), data.pin_hash);
     if (!ok) { await recordFailure(rateKey); return res.status(401).json({ error: 'Incorrect PIN.' }); }
@@ -46,7 +46,7 @@ export default async function handler(req, res) {
     const safeClean = escapeForOrFilter(clean);
 
     const { data: matches } = await supabaseAdmin
-      .from('creators').select('id, name, agency_id, pin_hash')
+      .from('creators').select('id, name, agency_id, pin_hash, age_self_confirmed')
       .eq('agency_id', agencyId)
       .or(`name.ilike.${safeClean},handle.ilike.${safeClean}`);
 
@@ -70,5 +70,5 @@ export default async function handler(req, res) {
 
   setSessionCookie(res, COOKIES.CREATOR, { creatorId: creator.id, agencyId: creator.agency_id, pinFp: pinFingerprint(creator.pin_hash) }, 60 * 60 * 24 * 30);
   await supabaseAdmin.from('creators').update({ last_active_at: new Date().toISOString() }).eq('id', creator.id);
-  return res.status(200).json({ id: creator.id, name: creator.name });
+  return res.status(200).json({ id: creator.id, name: creator.name, needsAgeConfirmation: !creator.age_self_confirmed });
 }

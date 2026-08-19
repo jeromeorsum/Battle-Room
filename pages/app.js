@@ -4,6 +4,7 @@ import { ZONES, BATTLE_TYPES, LEAGUE_OPTIONS, zoneByCode } from '../lib/constant
 import { enablePushNotifications, disablePushNotifications } from '../lib/pushClient';
 import { downloadICS, googleCalendarUrl } from '../lib/calendarClient';
 import { shareOrDownloadBattleCard } from '../lib/shareCard';
+import { isAdultDOB } from '../lib/age';
 import Avatar from '../components/Avatar';
 import PasswordField from '../components/PasswordField';
 import DateTimePicker from '../components/DateTimePicker';
@@ -24,6 +25,7 @@ export default function Home() {
   const [creators, setCreators] = useState([]);
   const [battles, setBattles] = useState([]);
   const [myId, setMyId] = useState(null);
+  const [needsAgeGate, setNeedsAgeGate] = useState(false);
   const [step, setStep] = useState('profile');
   const [loading, setLoading] = useState(true);
 
@@ -53,6 +55,7 @@ export default function Home() {
           const s = await sessRes.json();
           setAgency({ id: s.agencyId, name: s.agencyName, code: s.agencyCode });
           setMyId(s.creatorId);
+          if (s.needsAgeConfirmation) setNeedsAgeGate(true);
           await refresh(s.agencyId);
           setLoading(false);
           return;
@@ -100,7 +103,7 @@ export default function Home() {
     setStep('profile');
   }
 
-  async function createProfile(form, avatarFile) {
+  async function createProfile(form) {
     const res = await fetch('/api/creators', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, agencyCode: agency.code })
     });
@@ -108,19 +111,6 @@ export default function Home() {
     if (!res.ok) { toast(created.error || 'Could not create profile.', 'error'); return; }
     if (agency) localStorage.setItem(`battleroom-last-handle-${agency.id}`, created.name);
     setMyId(created.id);
-    if (avatarFile) {
-      try {
-        const dataUrl = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(avatarFile);
-        });
-        await fetch('/api/upload-avatar', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataUrl })
-        });
-      } catch (e) { console.error('avatar upload failed', e); }
-    }
     setStep('opponents');
     refresh();
   }
@@ -134,6 +124,7 @@ export default function Home() {
       if (!res.ok) { return data.error || 'Login failed.'; }
       if (agency) localStorage.setItem(`battleroom-last-handle-${agency.id}`, identifier);
       setMyId(data.id);
+      if (data.needsAgeConfirmation) { setNeedsAgeGate(true); return null; }
       setStep('opponents');
       return null;
     } catch (e) {
@@ -160,9 +151,13 @@ export default function Home() {
     );
   }
 
+  if (needsAgeGate) {
+    return <AgeGate onConfirmed={() => { setNeedsAgeGate(false); setStep('opponents'); }} onCancel={() => { setNeedsAgeGate(false); setMyId(null); logout(); }} />;
+  }
+
   return (
     <div className="wrap">
-      <header style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
+      <header className="app-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
         <div>
           <h1>BATTLE ROOM</h1>
           <div className="dim">{agency.name} · Live PK Schedule</div>
@@ -252,42 +247,53 @@ function focusNext(e) {
   else form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event('submit', { cancelable: true }));
 }
 
-function AvatarUploader({ me, onUploaded }) {
+function AgeGate({ onConfirmed, onCancel }) {
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [ageAttested, setAgeAttested] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  function handleFile(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+  async function submit(e) {
+    e.preventDefault();
     setError('');
+    if (!dateOfBirth) { setError('Please enter your date of birth.'); return; }
+    if (!isAdultDOB(dateOfBirth)) { setError('You must be at least 18 years old to use this platform.'); return; }
+    if (!ageAttested) { setError('Please confirm you are 18 or older.'); return; }
     setBusy(true);
-    const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        const res = await fetch('/api/upload-avatar', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ dataUrl: reader.result })
-        });
-        const data = await res.json();
-        if (!res.ok) { setError(data.error || 'Upload failed.'); setBusy(false); return; }
-        onUploaded(data.avatar_url);
-      } catch (err) { setError('Upload failed.'); }
+    try {
+      const res = await fetch('/api/creators/confirm-age', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dateOfBirth, ageAttested })
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Could not confirm your age.'); setBusy(false); return; }
+      onConfirmed();
+    } catch (err) {
+      setError('Could not reach the server — check your connection and try again.');
       setBusy(false);
-    };
-    reader.readAsDataURL(file);
+    }
   }
 
   return (
-    <div className="field">
-      <label>Profile picture (optional)</label>
-      <div className="row" style={{ alignItems: 'center' }}>
-        <Avatar url={me?.avatar_url} name={me?.name} size={56} />
-        <label className="btn ghost" style={{ cursor: 'pointer' }}>
-          {busy ? 'Uploading…' : 'Choose photo'}
-          <input type="file" accept="image/*" onChange={handleFile} style={{ display: 'none' }} disabled={busy} />
-        </label>
+    <div className="wrap">
+      <Head><title>Confirm your age · Battle Room</title></Head>
+      <div className="card" style={{ maxWidth: 480, margin: '40px auto' }}>
+        <h2>One quick step</h2>
+        <p className="dim">Your agency set up this account for you. Before you can use it, please confirm your own age. This platform is for adults only (18+).</p>
+        <form onSubmit={submit}>
+          <label className="field">
+            <span className="field-label">Date of birth</span>
+            <input type="date" value={dateOfBirth} max={new Date().toISOString().split('T')[0]} onChange={(e) => setDateOfBirth(e.target.value)} style={{ colorScheme: 'dark' }} />
+          </label>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', margin: '10px 0' }}>
+            <input type="checkbox" checked={ageAttested} onChange={(e) => setAgeAttested(e.target.checked)} style={{ width: 'auto', marginTop: 3 }} />
+            <span className="dim" style={{ fontSize: 12 }}>I confirm I am 18 years of age or older, and I agree to the <a href="/tos" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--cyan)' }}>Terms of Service</a>. This platform is for adults only.</span>
+          </label>
+          {error && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{error}</p>}
+          <button className="btn" type="submit" disabled={!dateOfBirth || !ageAttested || busy} style={{ width: '100%' }}>{busy ? 'Confirming…' : 'Confirm & continue'}</button>
+        </form>
+        <button className="btn ghost" onClick={onCancel} style={{ width: '100%', marginTop: 8 }}>Not now — sign out</button>
       </div>
-      {error && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{error}</p>}
     </div>
   );
 }
@@ -299,7 +305,6 @@ function ProfileStep({ me, creators, agencyId, onCreate, onLogin, onSaved }) {
   );
   const [pushStatus, setPushStatus] = useState('');
   const [saveError, setSaveError] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState(me?.avatar_url || null);
 
   function toggleTag(key) {
     setForm((f) => ({ ...f, tags: f.tags.includes(key) ? f.tags.filter((t) => t !== key) : [...f.tags, key] }));
@@ -328,7 +333,7 @@ function ProfileStep({ me, creators, agencyId, onCreate, onLogin, onSaved }) {
   }
 
   if (me) {
-    const completenessChecks = [avatarUrl, me.handle, me.league, (me.tags || []).length > 0, me.gender];
+    const completenessChecks = [me.handle, me.league, (me.tags || []).length > 0, me.gender];
     const completenessPct = Math.round((completenessChecks.filter(Boolean).length / completenessChecks.length) * 100);
     return (
       <form className="card" onSubmit={save} onKeyDown={focusNext}>
@@ -341,7 +346,6 @@ function ProfileStep({ me, creators, agencyId, onCreate, onLogin, onSaved }) {
             </div>
           </div>
         )}
-        <AvatarUploader me={{ ...me, avatar_url: avatarUrl }} onUploaded={setAvatarUrl} />
         <div className="row">
           <div className="field" style={{ flex: 1 }}><label>Nickname</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
           <div className="field" style={{ flex: 1 }}><label>Handle</label><input value={form.handle} onChange={(e) => setForm({ ...form, handle: e.target.value })} placeholder="e.g. miachen.live (no @ needed)" />
@@ -411,18 +415,20 @@ function LoggedOutView({ creators, agencyId, onCreate, onLogin }) {
   const [signIn, setSignIn] = useState({ identifier: rememberedHandle || '', pin: '' });
   const [signInError, setSignInError] = useState('');
   const [createForm, setCreateForm] = useState({ name: '', handle: '', diamonds: 0, league: '', tz: 'ET', tags: [], gender: '', pin: '' });
-  const [pendingAvatarFile, setPendingAvatarFile] = useState(null);
   const [ageAttested, setAgeAttested] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [dateOfBirth, setDateOfBirth] = useState('');
 
   async function handleCreate(e) {
     e.preventDefault();
     if (creating) return; // guard against double-submit
     if (!createForm.name || !createForm.pin) { toast('Nickname and PIN are required.', 'error'); return; }
+    if (!dateOfBirth) { toast('Please enter your date of birth.', 'error'); return; }
+    if (!isAdultDOB(dateOfBirth)) { toast('You must be at least 18 years old to use this platform.', 'error'); return; }
     if (!ageAttested) { toast('Please confirm you are 18 or older to continue.', 'error'); return; }
     setCreating(true);
     try {
-      await onCreate({ ...createForm, ageAttested }, pendingAvatarFile);
+      await onCreate({ ...createForm, ageAttested, dateOfBirth });
     } finally {
       setCreating(false);
     }
@@ -470,17 +476,6 @@ function LoggedOutView({ creators, agencyId, onCreate, onLogin }) {
       </div>
       <p className="dim" style={{ marginTop: 6 }}>Once you create your profile, this browser will remember you for 30 days.</p>
       <form onKeyDown={focusNext} onSubmit={handleCreate}>
-        <div className="field">
-          <label>Profile picture (optional)</label>
-          <div className="row" style={{ alignItems: 'center' }}>
-            <Avatar url={pendingAvatarFile ? URL.createObjectURL(pendingAvatarFile) : null} name={createForm.name} size={48} />
-            <label className="btn ghost" style={{ cursor: 'pointer' }}>
-              {pendingAvatarFile ? 'Change photo' : 'Choose photo'}
-              <input type="file" accept="image/*" onChange={(e) => setPendingAvatarFile(e.target.files[0] || null)} style={{ display: 'none' }} />
-            </label>
-          </div>
-          <div className="dim">If you skip this, your nickname's first letter is used instead.</div>
-        </div>
         <div className="row">
           <div className="field" style={{ flex: 1 }}><label>Nickname</label><input value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} /></div>
           <div className="field" style={{ flex: 1 }}><label>Handle</label><input value={createForm.handle} onChange={(e) => setCreateForm({ ...createForm, handle: e.target.value })} placeholder="e.g. miachen.live (no @ needed)" />
@@ -523,11 +518,21 @@ function LoggedOutView({ creators, agencyId, onCreate, onLogin }) {
         <div className="field"><label htmlFor="cp-pin">Set a PIN (6+ characters)</label>
           <PasswordField id="cp-pin" value={createForm.pin} onChange={(e) => setCreateForm({ ...createForm, pin: e.target.value })} minLength={6} placeholder="Choose a PIN" />
         </div>
+        <label className="field">
+          <span className="field-label">Date of birth</span>
+          <input
+            type="date"
+            value={dateOfBirth}
+            max={new Date().toISOString().split('T')[0]}
+            onChange={(e) => setDateOfBirth(e.target.value)}
+            style={{ colorScheme: 'dark' }}
+          />
+        </label>
         <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', margin: '10px 0' }}>
           <input type="checkbox" checked={ageAttested} onChange={(e) => setAgeAttested(e.target.checked)} style={{ width: 'auto', marginTop: 3 }} />
           <span className="dim" style={{ fontSize: 12 }}>I confirm I am 18 years of age or older, and I agree to the <a href="/tos" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--cyan)' }}>Terms of Service</a>. This platform is for adults only.</span>
         </label>
-        <button className="btn" type="submit" disabled={!ageAttested || creating}>{creating ? 'Creating…' : 'Create Profile & Continue'}</button>
+        <button className="btn" type="submit" disabled={!ageAttested || !dateOfBirth || creating}>{creating ? 'Creating…' : 'Create Profile & Continue'}</button>
       </form>
     </div>
   );

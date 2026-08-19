@@ -42,7 +42,6 @@ export default function Feedback() {
         {error && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{error}</p>}
         <button className="btn" type="submit">Send</button>
       </form>
-      <p className="dim">Have a feature request specifically? Check the <a href="/roadmap" style={{ color: 'var(--cyan)' }}>Roadmap</a> — you might be able to vote for it instead.</p>
     </div>
   );
 }

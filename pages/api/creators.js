@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import { isAdultDOB } from '../../lib/age';
 import { supabaseAdmin } from '../../lib/supabaseAdmin';
 import { readSession, setSessionCookie, COOKIES } from '../../lib/session';
 import { canWrite } from '../../lib/agencyStatus';
@@ -26,10 +27,18 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { name, handle, diamonds, league, tz, tags, pin, gender, agencyCode, ageAttested } = req.body;
+    const { name, handle, diamonds, league, tz, tags, pin, gender, agencyCode, ageAttested, dateOfBirth } = req.body;
     if (!name || !pin) return res.status(400).json({ error: 'Name and PIN are required.' });
     if (String(pin).length < 6) return res.status(400).json({ error: 'PIN must be at least 6 characters.' });
     if (!ageAttested) return res.status(400).json({ error: 'You must confirm you are 18 or older to create an account on this platform.' });
+    // A creator signing themselves up (they entered an agency code) verifies
+    // their own age with a date of birth, the same as agency signup. Profiles
+    // created by an agency admin instead rely on the agency's attestation
+    // (the agency is contractually responsible for its roster being adults).
+    if (agencyCode) {
+      if (!dateOfBirth) return res.status(400).json({ error: 'Please enter your date of birth.' });
+      if (!isAdultDOB(dateOfBirth)) return res.status(400).json({ error: 'You must be at least 18 years old to use this platform. Please enter a valid date of birth.' });
+    }
 
     // Creating an account is the one action where we deliberately don't
     // trust any cookie — we re-verify the actual agency code against the
@@ -87,7 +96,8 @@ export default async function handler(req, res) {
         agency_id: agencyId, name, handle: cleanHandle,
         diamonds: diamonds || 0, league: league || null, tz: tz || 'ET',
         tags: tags || [], gender: gender || null, pin_hash,
-        age_attested: true, age_attested_at: new Date().toISOString()
+        age_attested: true, age_attested_at: new Date().toISOString(), date_of_birth: dateOfBirth || null,
+        age_self_confirmed: !!agencyCode
       })
       .select('id, name, handle, diamonds, league, tz, tags, avatar_url, gender')
       .single();

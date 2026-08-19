@@ -606,7 +606,7 @@ export default function Admin() {
 
   return (
     <div className="wrap" style={accentColor ? { '--gold': accentColor } : undefined}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+      <header className="app-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
         <div>
           <h1>Admin</h1>
           <div className="dim">{agency.name} · {creators.length}/{agency.max_creators} creators · plan: {agency.plan_tier}{isManager ? ' · logged in as manager' : ''}</div>
@@ -724,7 +724,7 @@ export default function Admin() {
             {addError && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{addError}</p>}
             <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', margin: '10px 0' }}>
               <input type="checkbox" checked={addAgeAttested} onChange={(e) => setAddAgeAttested(e.target.checked)} style={{ width: 'auto', marginTop: 3 }} />
-              <span className="dim" style={{ fontSize: 12 }}>I confirm this creator is 18 years of age or older. This platform is for adults only.</span>
+              <span className="dim" style={{ fontSize: 12 }}>I confirm this creator is 18 years of age or older. Our agency is responsible for ensuring everyone we add is an adult; this platform is for adults only.</span>
             </label>
             <button className="btn" type="submit" disabled={!addAgeAttested}>Add to Roster</button>
           </form>
