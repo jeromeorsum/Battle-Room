@@ -20,7 +20,7 @@ input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: -apple-system, Inter, sans-serif; }
-.wrap { max-width: 880px; margin: 0 auto; padding: 24px 16px 60px; }
+.wrap { max-width: 880px; margin: 0 auto; padding: calc(env(safe-area-inset-top, 0px) + 24px) 16px 60px; }
 h1 { font-size: 32px; margin: 0 0 4px; }
 .card { background: var(--bg-card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin-bottom: 18px; }
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; min-width: 0; }
@@ -56,7 +56,7 @@ input, select { background: var(--bg-raised); border: 1px solid var(--line); bor
 
 /* Mobile (iPhone and similar) */
 @media (max-width: 600px) {
-  .wrap { padding: 16px 12px 50px; }
+  .wrap { padding: calc(env(safe-area-inset-top, 0px) + 52px) 12px 50px; }
   h1 { font-size: 26px; }
   .card { padding: 14px 16px; }
   .row { flex-direction: column; gap: 10px; }

@@ -225,11 +225,6 @@ export default function Signup() {
               onError={() => reportTurnstileUnavailable('script failed to load')}
             />
             <div id="turnstile-widget" style={{ margin: '10px 0' }} />
-            {turnstileUnavailable && (
-              <p className="dim" style={{ fontSize: 12, color: 'var(--gold)' }}>
-                The bot-check couldn&apos;t load right now — that&apos;s on our end, not yours. You can go ahead and create your agency anyway.
-              </p>
-            )}
           </>
         )}
         {error && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{error}</p>}

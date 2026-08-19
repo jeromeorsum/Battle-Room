@@ -38,7 +38,8 @@ export default function NavMenu() {
         style={{
           width: 44, height: 44, borderRadius: '50%',
           background: 'var(--bg-card)', border: '1px solid var(--line)', color: 'var(--gold)',
-          fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+          fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.55)'
         }}
       >
         {open ? '✕' : '☰'}
