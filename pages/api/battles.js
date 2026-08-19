@@ -59,6 +59,12 @@ export default async function handler(req, res) {
 
     const zone = zoneByCode(zoneCode);
     const utcDate = zonedTimeToUtc(localDateTime, zone.iana);
+    // A battle can't be scheduled in the past. Allow a small 5-minute grace
+    // window so a booking made "for right now" doesn't get rejected by clock
+    // skew or the few seconds it takes to submit.
+    if (utcDate.getTime() < Date.now() - 5 * 60 * 1000) {
+      return res.status(400).json({ error: 'Pick a time in the future — you can\u2019t schedule a battle in the past.' });
+    }
     const acceptedA = proposerId === creatorA;
     const acceptedB = proposerId === creatorB;
 

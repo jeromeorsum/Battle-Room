@@ -34,10 +34,14 @@ export default async function handler(req, res) {
       const { localDateTime, zoneCode, notes } = req.body;
       if (!localDateTime) return res.status(400).json({ error: 'Pick a new time to propose.' });
 
-      await supabaseAdmin.from('battles').update({ declined: true }).eq('id', id);
-
       const zone = zoneByCode(zoneCode);
       const utcDate = zonedTimeToUtc(localDateTime, zone.iana);
+      if (utcDate.getTime() < Date.now() - 5 * 60 * 1000) {
+        return res.status(400).json({ error: 'Pick a time in the future — you can\u2019t propose a battle in the past.' });
+      }
+
+      await supabaseAdmin.from('battles').update({ declined: true }).eq('id', id);
+
       const acceptedA = actorId === battle.creator_a;
       const acceptedB = actorId === battle.creator_b;
 
@@ -93,6 +97,31 @@ export default async function handler(req, res) {
 
   if (req.method === 'DELETE') {
     if (!isParticipant && !isAgencyAdmin) return res.status(403).json({ error: 'Not authorized to remove this battle.' });
+
+    // Notify the other side(s) that the battle is off — but only if it wasn't
+    // already dead (declined) and hadn't already happened. If a creator
+    // cancels, tell their opponent; if an admin cancels, tell both creators.
+    const alreadyDead = battle.declined;
+    const inPast = new Date(battle.datetime_utc).getTime() < Date.now();
+    if (!alreadyDead && !inPast) {
+      let recipients = [];
+      let actorName = 'Your opponent';
+      if (isParticipant) {
+        const actorId = creatorSession.creatorId;
+        recipients = [actorId === battle.creator_a ? battle.creator_b : battle.creator_a];
+        const { data: actor } = await supabaseAdmin.from('creators').select('name').eq('id', actorId).single();
+        if (actor) actorName = actor.name;
+      } else {
+        recipients = [battle.creator_a, battle.creator_b];
+        actorName = 'Your agency';
+      }
+      await Promise.all(recipients.filter(Boolean).map((rid) => notifyCreator(rid, {
+        title: 'Battle cancelled',
+        body: `${actorName} cancelled a scheduled battle. Open Battle Room for details.`,
+        url: '/app'
+      })));
+    }
+
     const { error } = await supabaseAdmin.from('battles').delete().eq('id', id);
     if (error) return res.status(500).json({ error: error.message });
     return res.status(204).end();

@@ -88,6 +88,7 @@ create table if not exists battles (
   accepted_b boolean default false,
   declined boolean default false,
   created_by uuid references creators(id) on delete set null,
+  reminder_sent boolean default false,
   created_at timestamptz default now()
 );
 

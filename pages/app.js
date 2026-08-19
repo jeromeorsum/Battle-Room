@@ -5,6 +5,7 @@ import { enablePushNotifications, disablePushNotifications } from '../lib/pushCl
 import { downloadICS, googleCalendarUrl } from '../lib/calendarClient';
 import { shareOrDownloadBattleCard } from '../lib/shareCard';
 import { isAdultDOB } from '../lib/age';
+import { matchScore } from '../lib/matchmaking';
 import Avatar from '../components/Avatar';
 import PasswordField from '../components/PasswordField';
 import DateTimePicker from '../components/DateTimePicker';
@@ -558,12 +559,10 @@ function OpponentsStep({ me, creators, onPropose }) {
   const q = search.trim().toLowerCase();
   const others = creators.filter((c) => c.id !== me.id && (!q || c.name.toLowerCase().includes(q) || (c.handle || '').toLowerCase().includes(q)));
 
-  const scored = others.map((s) => {
-    const diamondDiff = Math.abs((s.diamonds || 0) - (me.diamonds || 0));
-    const tzPenalty = s.tz === me.tz ? 0 : 5000;
-    const favoriteBonus = favorites.has(s.id) ? -1000000 : 0; // favorites always float to the top
-    return { s, score: diamondDiff + tzPenalty + favoriteBonus };
-  });
+  // Best Match scoring lives in lib/matchmaking (pure + unit-tested). Lower is
+  // a better match: similar diamonds, same timezone, nearby league, favorites
+  // floated to the top.
+  const scored = others.map((s) => ({ s, score: matchScore(me, s, { isFavorite: favorites.has(s.id) }) }));
 
   if (sortBy === 'match') scored.sort((a, b) => a.score - b.score);
   else if (sortBy === 'diamonds') scored.sort((a, b) => (favorites.has(b.s.id) - favorites.has(a.s.id)) || (b.s.diamonds || 0) - (a.s.diamonds || 0));
