@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { supabaseAdmin } from '../../lib/supabaseAdmin';
+import { checkAndRecordActionRate } from '../../lib/rateLimit';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') { res.setHeader('Allow', ['POST']); return res.status(405).end(); }
@@ -7,6 +8,12 @@ export default async function handler(req, res) {
   const { agencyId, token, newCode } = req.body;
   if (!agencyId || !token || !newCode) return res.status(400).json({ error: 'Missing information.' });
   if (String(newCode).length < 8) return res.status(400).json({ error: 'New admin code must be at least 8 characters.' });
+
+  // Defense in depth: the reset token is already a 256-bit random secret (see
+  // forgot-admin-code) so it can't realistically be guessed, but we still cap
+  // attempts per agency so this endpoint can't be hammered.
+  const rate = await checkAndRecordActionRate(`reset-admin-code:${agencyId}`, 15, 10);
+  if (!rate.allowed) return res.status(429).json({ error: 'Too many attempts. Please request a fresh reset link and try again shortly.' });
 
   const { data: resets } = await supabaseAdmin
     .from('password_resets')
