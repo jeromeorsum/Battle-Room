@@ -48,6 +48,9 @@ input, select { background: var(--bg-raised); border: 1px solid var(--line); bor
 @media (max-width: 900px) {
   .pricing-grid { grid-template-columns: repeat(2, 1fr); }
 }
+@media (max-width: 480px) {
+  .pricing-grid { grid-template-columns: 1fr; }
+}
 .chip { display: flex; gap: 8px; align-items: center; background: var(--bg-raised); padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line); font-size: 13px; cursor: pointer; }
 .chip input[type="checkbox"] { width: 20px; height: 20px; flex-shrink: 0; accent-color: var(--gold); }
 
