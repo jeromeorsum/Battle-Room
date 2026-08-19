@@ -155,6 +155,12 @@ Roughly in the order that makes sense:
 
 - **Analytics** — ✅ DONE (enabled in Vercel and collecting visits).
 - **Favicon** — ✅ DONE (already in your browser tab).
+- **After upgrading to Vercel Pro: enable the pre-battle reminder cron.** The
+  `/api/cron/battle-reminders` endpoint is built and ready (push notifies both
+  creators ~an hour before a confirmed battle). It is NOT scheduled yet because
+  Hobby caps you at 2 cron jobs / once-a-day. Once on Pro, add this to the
+  "crons" array in vercel.json:
+  `{ "path": "/api/cron/battle-reminders", "schedule": "*/15 * * * *" }`
 - **Light stress test now / real one later** — a small burst test now is fine
   to confirm signups don't exhaust the free-tier DB connections. The *real*
   load test belongs AFTER you're on Vercel Pro + Supabase Pro, so you're

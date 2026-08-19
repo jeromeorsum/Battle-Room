@@ -2,6 +2,14 @@ import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 import { notifyCreator } from '../../../lib/push';
 import { logError } from '../../../lib/logger';
 
+// NOT YET SCHEDULED. This endpoint is ready, but it is intentionally left out
+// of vercel.json's "crons" because the Hobby plan allows at most 2 cron jobs
+// and no schedule more frequent than once per day. After upgrading to Vercel
+// Pro, add this line back to vercel.json to run it every 15 minutes:
+//   { "path": "/api/cron/battle-reminders", "schedule": "*/15 * * * *" }
+// Until then it can still be triggered manually with the CRON_SECRET bearer
+// token for testing.
+
 // Vercel Cron sends this header automatically; anything else must know
 // CRON_SECRET. This route fires push notifications, so it's locked down.
 function isAuthorized(req) {
