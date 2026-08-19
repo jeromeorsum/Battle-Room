@@ -76,13 +76,17 @@ export default function Home() {
   async function joinAgency(e) {
     if (e) e.preventDefault();
     setAgencyError('');
-    const res = await fetch('/api/agencies/resolve', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agencyCode: agencyCodeInput })
-    });
-    const data = await res.json();
-    if (!res.ok) { setAgencyError(data.error || 'Agency not found.'); return; }
-    setAgency({ id: data.id, name: data.name, code: agencyCodeInput.trim().toUpperCase() });
-    refresh(data.id);
+    try {
+      const res = await fetch('/api/agencies/resolve', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ agencyCode: agencyCodeInput })
+      });
+      const data = await res.json();
+      if (!res.ok) { setAgencyError(data.error || 'Agency not found.'); return; }
+      setAgency({ id: data.id, name: data.name, code: agencyCodeInput.trim().toUpperCase() });
+      refresh(data.id);
+    } catch (e) {
+      setAgencyError('Could not reach the server — check your connection and try again.');
+    }
   }
 
   async function switchAgency() {
@@ -122,15 +126,19 @@ export default function Home() {
   }
 
   async function login(identifier, pin) {
-    const res = await fetch('/api/login', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier, pin })
-    });
-    const data = await res.json();
-    if (!res.ok) { return data.error || 'Login failed.'; }
-    if (agency) localStorage.setItem(`battleroom-last-handle-${agency.id}`, identifier);
-    setMyId(data.id);
-    setStep('opponents');
-    return null;
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier, pin })
+      });
+      const data = await res.json();
+      if (!res.ok) { return data.error || 'Login failed.'; }
+      if (agency) localStorage.setItem(`battleroom-last-handle-${agency.id}`, identifier);
+      setMyId(data.id);
+      setStep('opponents');
+      return null;
+    } catch (e) {
+      return 'Could not reach the server — check your connection and try again.';
+    }
   }
 
   if (loading) return <div className="wrap"><SkeletonList count={2} /></div>;

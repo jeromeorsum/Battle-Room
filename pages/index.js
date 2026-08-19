@@ -36,6 +36,35 @@ export default function Landing() {
       </div>
 
       <div className="card">
+        <h2 style={{ textAlign: 'center' }}>How it works</h2>
+        <div className="how-grid">
+          <div className="how-step">
+            <span className="how-num" aria-hidden="true">1</span>
+            <b>Create your agency</b>
+            <p className="dim">Start a free trial and get your own private agency space. You get an admin code to manage everything and an agency code to share with your creators.</p>
+          </div>
+          <div className="how-step">
+            <span className="how-num" aria-hidden="true">2</span>
+            <b>Add your creators</b>
+            <p className="dim">Add creators yourself, or share your agency code so they sign themselves up with a nickname and a PIN. Their diamonds, league, and timezone drive the matchmaking.</p>
+          </div>
+          <div className="how-step">
+            <span className="how-num" aria-hidden="true">3</span>
+            <b>Match &amp; schedule battles</b>
+            <p className="dim">Find fair opponents by diamonds, league, timezone, and battle type — then propose a time. Nobody lands on a battle they didn't accept.</p>
+          </div>
+          <div className="how-step">
+            <span className="how-num" aria-hidden="true">4</span>
+            <b>Everyone gets reminded</b>
+            <p className="dim">Once a battle is confirmed, both creators get push notifications and calendar invites, so no one misses a scheduled PK.</p>
+          </div>
+        </div>
+        <div className="row" style={{ justifyContent: 'center', marginTop: 20 }}>
+          <a href="/signup" className="btn" style={{ textDecoration: 'none' }}>Start your agency's trial</a>
+        </div>
+      </div>
+
+      <div className="card">
         <h2 style={{ textAlign: 'center' }}>Pricing</h2>
         <p className="dim" style={{ textAlign: 'center' }}>Every plan starts with a 14-day free trial — no card required.</p>
         <div className="row" style={{ justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>

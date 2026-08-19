@@ -127,3 +127,35 @@ textarea:focus-visible,
   white-space: nowrap;
   border: 0;
 }
+
+/* "How it works" numbered steps on the homepage */
+.how-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 8px;
+}
+.how-step {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.how-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--gold);
+  color: #0a0a0f;
+  font-weight: 800;
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+@media (max-width: 900px) {
+  .how-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .how-grid { grid-template-columns: 1fr; }
+}
