@@ -621,9 +621,9 @@ export default function Admin() {
             <h2>Secure your account</h2>
             <p className="dim">You're logged in with the shared admin code. Set up your own email &amp; password so your access can't be lost or copied along with the shared code — you can add two-factor authentication afterward too.</p>
             <form onSubmit={submitConvert}>
-              <div className="field"><label>Your email</label><input type="email" required value={convertForm.email} onChange={(e) => setConvertForm({ ...convertForm, email: e.target.value })} /></div>
-              <div className="field"><label>Choose a password (10+ characters)</label>
-                <PasswordField value={convertForm.password} onChange={(e) => setConvertForm({ ...convertForm, password: e.target.value })} />
+              <div className="field"><label htmlFor="cv-email">Your email</label><input id="cv-email" type="email" required value={convertForm.email} onChange={(e) => setConvertForm({ ...convertForm, email: e.target.value })} /></div>
+              <div className="field"><label htmlFor="cv-password">Choose a password (10+ characters)</label>
+                <PasswordField id="cv-password" value={convertForm.password} onChange={(e) => setConvertForm({ ...convertForm, password: e.target.value })} />
               </div>
               {convertMsg && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{convertMsg}</p>}
               <button className="btn" type="submit" style={{ width: '100%' }}>Set Up My Account</button>
@@ -738,8 +738,8 @@ export default function Admin() {
               <div className="field" style={{ flex: 1 }}><label>Search by name or handle</label><input value={filters.search || ''} onChange={(e) => setFilters({ ...filters, search: e.target.value })} placeholder="Search…" /></div>
               <div className="field"><label>Min diamonds</label><DiamondInput value={filters.min === '' ? 0 : Number(filters.min)} onChange={(v) => setFilters({ ...filters, min: v })} /></div>
               <div className="field"><label>Max diamonds</label><DiamondInput value={filters.max === '' ? 0 : Number(filters.max)} onChange={(v) => setFilters({ ...filters, max: v })} /></div>
-              <div className="field"><label>Battle type</label>
-                <select value={filters.type} onChange={(e) => setFilters({ ...filters, type: e.target.value })}>
+              <div className="field"><label htmlFor="flt-type">Battle type</label>
+                <select id="flt-type" value={filters.type} onChange={(e) => setFilters({ ...filters, type: e.target.value })}>
                   <option value="all">All types</option>
                   {BATTLE_TYPES.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
                 </select>

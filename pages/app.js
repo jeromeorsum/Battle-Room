@@ -438,9 +438,9 @@ function LoggedOutView({ creators, agencyId, onCreate, onLogin }) {
         <h2>Sign In</h2>
         <p className="dim">Enter your nickname or handle and your PIN. This browser will remember you for 30 days after you sign in.</p>
         <form onKeyDown={focusNext} onSubmit={submitSignIn}>
-          <div className="field"><label>Nickname or Handle</label><input value={signIn.identifier} onChange={(e) => setSignIn({ ...signIn, identifier: e.target.value })} autoFocus /></div>
-          <div className="field"><label>PIN</label>
-            <PasswordField value={signIn.pin} onChange={(e) => setSignIn({ ...signIn, pin: e.target.value })} placeholder="PIN" />
+          <div className="field"><label htmlFor="ci-identifier">Nickname or Handle</label><input id="ci-identifier" value={signIn.identifier} onChange={(e) => setSignIn({ ...signIn, identifier: e.target.value })} autoFocus /></div>
+          <div className="field"><label htmlFor="ci-pin">PIN</label>
+            <PasswordField id="ci-pin" value={signIn.pin} onChange={(e) => setSignIn({ ...signIn, pin: e.target.value })} placeholder="PIN" />
           </div>
           {signInError && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{signInError}</p>}
           <button className="btn" type="submit">Sign In</button>
@@ -512,8 +512,8 @@ function LoggedOutView({ creators, agencyId, onCreate, onLogin }) {
             ))}
           </div>
         </div>
-        <div className="field"><label>Set a PIN (6+ characters)</label>
-          <PasswordField value={createForm.pin} onChange={(e) => setCreateForm({ ...createForm, pin: e.target.value })} minLength={6} placeholder="Choose a PIN" />
+        <div className="field"><label htmlFor="cp-pin">Set a PIN (6+ characters)</label>
+          <PasswordField id="cp-pin" value={createForm.pin} onChange={(e) => setCreateForm({ ...createForm, pin: e.target.value })} minLength={6} placeholder="Choose a PIN" />
         </div>
         <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', margin: '10px 0' }}>
           <input type="checkbox" checked={ageAttested} onChange={(e) => setAgeAttested(e.target.checked)} style={{ width: 'auto', marginTop: 3 }} />
@@ -667,7 +667,7 @@ function BoardStep({ me }) {
       <form className="card" onSubmit={post}>
         <h2>Find a Battle</h2>
         <p className="dim">Post what you're looking for — like an LFG board. Anyone in your agency can see it, and only you (or an admin) can delete your post.</p>
-        <div className="field"><label>Your post</label><input value={message} onChange={(e) => setMessage(e.target.value)} maxLength={280} placeholder="e.g. Looking for a chill battle tonight around 8pm ET" /></div>
+        <div className="field"><label htmlFor="post-msg">Your post</label><input id="post-msg" value={message} onChange={(e) => setMessage(e.target.value)} maxLength={280} placeholder="e.g. Looking for a chill battle tonight around 8pm ET" /></div>
         {error && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{error}</p>}
         <button className="btn" type="submit" disabled={posting}>{posting ? 'Posting…' : 'Post'}</button>
       </form>
