@@ -514,7 +514,7 @@ export default function Admin() {
           <form className="card" style={{ maxWidth: 380, margin: '60px auto' }} onSubmit={submit2fa}>
             <h2>Two-Factor Code</h2>
             <p className="dim">Enter the 6-digit code from your authenticator app.</p>
-            <div className="field"><input value={twoFaCode} onChange={(e) => setTwoFaCode(e.target.value)} placeholder="123456" maxLength={6} autoFocus /></div>
+            <div className="field"><input aria-label="Two-factor authentication code" value={twoFaCode} onChange={(e) => setTwoFaCode(e.target.value)} placeholder="123456" maxLength={6} autoFocus /></div>
             {error && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{error}</p>}
             <button className="btn" type="submit" disabled={twoFaCode.length !== 6}>Verify</button>
           </form>
@@ -534,9 +534,9 @@ export default function Admin() {
             <form onSubmit={submitLogin} onKeyDown={focusNext}>
               <h2>Agency Admin Login</h2>
               <p className="dim">Enter your agency code and your personal admin code.</p>
-              <div className="field"><label>Agency code</label><input value={codes.agencyCode} onChange={(e) => setCodes({ ...codes, agencyCode: e.target.value.toUpperCase() })} placeholder="e.g. FALCON7X2" /></div>
-              <div className="field"><label>Admin code</label>
-                <PasswordField value={codes.adminCode} onChange={(e) => setCodes({ ...codes, adminCode: e.target.value })} placeholder="Admin code" />
+              <div className="field"><label htmlFor="li-agency-code">Agency code</label><input id="li-agency-code" value={codes.agencyCode} onChange={(e) => setCodes({ ...codes, agencyCode: e.target.value.toUpperCase() })} placeholder="e.g. FALCON7X2" /></div>
+              <div className="field"><label htmlFor="li-admin-code">Admin code</label>
+                <PasswordField id="li-admin-code" value={codes.adminCode} onChange={(e) => setCodes({ ...codes, adminCode: e.target.value })} placeholder="Admin code" />
               </div>
               <label style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '6px 0 12px' }}>
                 <input type="checkbox" checked={codes.remember} onChange={(e) => setCodes({ ...codes, remember: e.target.checked })} style={{ width: 'auto' }} />
@@ -550,8 +550,8 @@ export default function Admin() {
               </button>
               {forgotOpen && (
                 <div style={{ marginTop: 10 }}>
-                  <div className="field"><label>Agency code</label><input value={forgotForm.agencyCode} onChange={(e) => setForgotForm({ ...forgotForm, agencyCode: e.target.value.toUpperCase() })} /></div>
-                  <div className="field"><label>Contact email on file</label><input type="email" value={forgotForm.contactEmail} onChange={(e) => setForgotForm({ ...forgotForm, contactEmail: e.target.value })} /></div>
+                  <div className="field"><label htmlFor="fg-agency-code">Agency code</label><input id="fg-agency-code" value={forgotForm.agencyCode} onChange={(e) => setForgotForm({ ...forgotForm, agencyCode: e.target.value.toUpperCase() })} /></div>
+                  <div className="field"><label htmlFor="fg-contact-email">Contact email on file</label><input id="fg-contact-email" type="email" value={forgotForm.contactEmail} onChange={(e) => setForgotForm({ ...forgotForm, contactEmail: e.target.value })} /></div>
                   {forgotMsg && <p className="dim" style={{ fontSize: 12 }}>{forgotMsg}</p>}
                   <button type="button" className="btn" style={{ width: '100%' }} onClick={submitForgot}>Send Reset Link</button>
                 </div>
@@ -561,10 +561,10 @@ export default function Admin() {
             <form onSubmit={submitEmailLogin}>
               <h2>Team Member Login</h2>
               <p className="dim">Sign in with your individual email and password.</p>
-              <div className="field"><label>Agency code</label><input value={emailLogin.agencyCode} onChange={(e) => setEmailLogin({ ...emailLogin, agencyCode: e.target.value.toUpperCase() })} placeholder="e.g. FALCON7X2" /></div>
-              <div className="field"><label>Email</label><input type="email" value={emailLogin.email} onChange={(e) => setEmailLogin({ ...emailLogin, email: e.target.value })} /></div>
-              <div className="field"><label>Password</label>
-                <PasswordField value={emailLogin.password} onChange={(e) => setEmailLogin({ ...emailLogin, password: e.target.value })} placeholder="Password" />
+              <div className="field"><label htmlFor="el-agency-code">Agency code</label><input id="el-agency-code" value={emailLogin.agencyCode} onChange={(e) => setEmailLogin({ ...emailLogin, agencyCode: e.target.value.toUpperCase() })} placeholder="e.g. FALCON7X2" /></div>
+              <div className="field"><label htmlFor="el-email">Email</label><input id="el-email" type="email" value={emailLogin.email} onChange={(e) => setEmailLogin({ ...emailLogin, email: e.target.value })} /></div>
+              <div className="field"><label htmlFor="el-password">Password</label>
+                <PasswordField id="el-password" value={emailLogin.password} onChange={(e) => setEmailLogin({ ...emailLogin, password: e.target.value })} placeholder="Password" />
               </div>
               <label style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '6px 0 12px' }}>
                 <input type="checkbox" checked={emailLogin.remember} onChange={(e) => setEmailLogin({ ...emailLogin, remember: e.target.checked })} style={{ width: 'auto' }} />

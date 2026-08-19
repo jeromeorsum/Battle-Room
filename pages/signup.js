@@ -173,25 +173,25 @@ export default function Signup() {
       <h1>Set up your agency</h1>
       <p className="dim">Start with a 14-day free trial — no card required until you're ready to subscribe.</p>
       <form className="card" style={{ maxWidth: 480 }} onSubmit={submit}>
-        <div className="field"><label>Agency name</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-        <div className="field"><label>Contact email (required — for billing/account questions)</label><input type="email" required value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} /></div>
-        <div className="field"><label>Contact phone (required)</label><input type="tel" required value={form.contactPhone} onChange={(e) => setForm({ ...form, contactPhone: e.target.value })} /></div>
-        <div className="field"><label>Choose an admin code (full access — billing, remove creators, everything)</label>
-          <PasswordField value={form.adminCode} onChange={(e) => setForm({ ...form, adminCode: e.target.value })} />
+        <div className="field"><label htmlFor="f-agency-name">Agency name</label><input id="f-agency-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+        <div className="field"><label htmlFor="f-contact-email">Contact email (required — for billing/account questions)</label><input id="f-contact-email" type="email" required value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} /></div>
+        <div className="field"><label htmlFor="f-contact-phone">Contact phone (required)</label><input id="f-contact-phone" type="tel" required value={form.contactPhone} onChange={(e) => setForm({ ...form, contactPhone: e.target.value })} /></div>
+        <div className="field"><label htmlFor="f-admin-code">Choose an admin code (full access — billing, remove creators, everything)</label>
+          <PasswordField id="f-admin-code" value={form.adminCode} onChange={(e) => setForm({ ...form, adminCode: e.target.value })} />
         </div>
-        <div className="field"><label>Manager code (optional — lets staff book battles without seeing billing or removing people)</label>
-          <PasswordField value={form.managerCode} onChange={(e) => setForm({ ...form, managerCode: e.target.value })} />
+        <div className="field"><label htmlFor="f-manager-code">Manager code (optional — lets staff book battles without seeing billing or removing people)</label>
+          <PasswordField id="f-manager-code" value={form.managerCode} onChange={(e) => setForm({ ...form, managerCode: e.target.value })} />
           <div className="dim">Leave blank if you don't need this — you can add it later from the admin panel.</div>
         </div>
-        <div className="field"><label>Referral code (optional)</label><input value={form.referralCode} onChange={(e) => setForm({ ...form, referralCode: e.target.value.toUpperCase() })} placeholder="Got one from another agency?" /></div>
+        <div className="field"><label htmlFor="f-referral-code">Referral code (optional)</label><input id="f-referral-code" value={form.referralCode} onChange={(e) => setForm({ ...form, referralCode: e.target.value.toUpperCase() })} placeholder="Got one from another agency?" /></div>
 
         <div className="field">
-          <label>Plan</label>
-          <div className="row" style={{ marginBottom: 8 }}>
-            <button type="button" className={billingPeriod === 'monthly' ? 'btn' : 'btn ghost'} onClick={() => setBillingPeriod('monthly')}>Monthly</button>
-            <button type="button" className={billingPeriod === 'yearly' ? 'btn' : 'btn ghost'} onClick={() => setBillingPeriod('yearly')}>Yearly</button>
+          <label htmlFor="f-plan-tier">Plan</label>
+          <div className="row" style={{ marginBottom: 8 }} role="group" aria-label="Billing period">
+            <button type="button" aria-pressed={billingPeriod === 'monthly'} className={billingPeriod === 'monthly' ? 'btn' : 'btn ghost'} onClick={() => setBillingPeriod('monthly')}>Monthly</button>
+            <button type="button" aria-pressed={billingPeriod === 'yearly'} className={billingPeriod === 'yearly' ? 'btn' : 'btn ghost'} onClick={() => setBillingPeriod('yearly')}>Yearly</button>
           </div>
-          <select value={form.planTier} onChange={(e) => setForm({ ...form, planTier: e.target.value })}>
+          <select id="f-plan-tier" value={form.planTier} onChange={(e) => setForm({ ...form, planTier: e.target.value })}>
             {PRICING_TIERS.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.label} — {t.monthly ? `$${billingPeriod === 'yearly' ? t.yearly : t.monthly}/${billingPeriod === 'yearly' ? 'yr' : 'mo'}` : 'contact us'}

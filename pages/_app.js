@@ -36,9 +36,12 @@ export default function App({ Component, pageProps }) {
         <title>Battle Room — Live Creator Battles for Agencies</title>
       </Head>
       <NavMenu />
-      <ErrorBoundary>
-        <Component {...pageProps} />
-      </ErrorBoundary>
+      <a href="#main-content" className="skip-link">Skip to main content</a>
+      <main id="main-content">
+        <ErrorBoundary>
+          <Component {...pageProps} />
+        </ErrorBoundary>
+      </main>
       <Analytics />
       <NotifyHost />
     </>
