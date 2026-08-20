@@ -25,6 +25,7 @@ export default function Admin() {
   const [presets, setPresets] = useState([]);
   const [presetName, setPresetName] = useState('');
   const [bulkTagKey, setBulkTagKey] = useState('');
+  const [battleFilter, setBattleFilter] = useState('all');
   const [bookForm, setBookForm] = useState({ a: '', b: '', datetime: '', tz: 'ET', notes: '' });
   const [addForm, setAddForm] = useState({ name: '', handle: '', diamonds: 0, league: '', tz: 'ET', tags: [], pin: '' });
   const [addAgeAttested, setAddAgeAttested] = useState(false);
@@ -606,6 +607,7 @@ export default function Admin() {
 
   return (
     <div className="wrap" style={accentColor ? { '--gold': accentColor } : undefined}>
+      <Head><title>Admin · Battle Room</title></Head>
       <header className="app-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
         <div>
           <h1>Admin</h1>
@@ -659,6 +661,40 @@ export default function Admin() {
 
       {adminTab === 'dashboard' && (
         <>
+          {(() => {
+            // Agency insights — computed from already-loaded data (no extra
+            // queries). Gives the owner an at-a-glance read on roster and
+            // battle health.
+            const now = Date.now();
+            const confirmed = battles.filter((b) => b.accepted_a && b.accepted_b && !b.declined);
+            const upcoming = confirmed.filter((b) => new Date(b.datetime_utc).getTime() >= now);
+            const completed = confirmed.filter((b) => new Date(b.datetime_utc).getTime() < now);
+            const pending = battles.filter((b) => !b.declined && !(b.accepted_a && b.accepted_b));
+            const next7 = upcoming.filter((b) => new Date(b.datetime_utc).getTime() < now + 7 * 24 * 3600 * 1000);
+            const completeProfiles = creators.filter((c) => c.handle && c.league && (c.tags || []).length > 0 && c.gender).length;
+            const slotsLeft = Math.max(0, (agency?.max_creators || 0) - creators.length);
+            const stat = (label, value, sub) => (
+              <div style={{ background: 'var(--bg-raised)', border: '1px solid var(--line)', borderRadius: 10, padding: '12px 14px' }}>
+                <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--gold)', lineHeight: 1.1 }}>{value}</div>
+                <div style={{ fontSize: 12, fontWeight: 600, marginTop: 2 }}>{label}</div>
+                {sub && <div className="dim" style={{ fontSize: 11, marginTop: 2 }}>{sub}</div>}
+              </div>
+            );
+            if (creators.length === 0 && battles.length === 0) return null; // nothing to show yet
+            return (
+              <div className="card">
+                <h2 style={{ marginTop: 0 }}>At a glance</h2>
+                <div className="insights-grid">
+                  {stat('Creators', creators.length, slotsLeft > 0 ? `${slotsLeft} slot${slotsLeft === 1 ? '' : 's'} left` : 'roster full')}
+                  {stat('Complete profiles', `${completeProfiles}/${creators.length || 0}`, 'handle · league · tags · gender')}
+                  {stat('Upcoming battles', upcoming.length, next7.length > 0 ? `${next7.length} in the next 7 days` : 'none this week')}
+                  {stat('Awaiting response', pending.length, 'proposed, not yet confirmed')}
+                  {stat('Completed battles', completed.length, 'already happened')}
+                </div>
+              </div>
+            );
+          })()}
+
           {showOnboarding && (creators.length === 0 || battles.length === 0) && (
             <div className="card" style={{ borderColor: 'var(--gold)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -831,23 +867,50 @@ export default function Admin() {
 
           <div className="card">
             <h2>All Battles</h2>
-            {battles.map((b) => {
-              const a = creators.find((c) => c.id === b.creator_a);
-              const bb = creators.find((c) => c.id === b.creator_b);
-              const status = b.declined ? 'Declined' : (b.accepted_a && b.accepted_b) ? 'Confirmed' : 'Pending';
+            {(() => {
+              const now = Date.now();
+              const statusOf = (b) => b.declined ? 'declined'
+                : (b.accepted_a && b.accepted_b)
+                  ? (new Date(b.datetime_utc).getTime() < now ? 'completed' : 'upcoming')
+                  : 'pending';
+              const counts = battles.reduce((acc, b) => { const s = statusOf(b); acc[s] = (acc[s] || 0) + 1; return acc; }, {});
+              const filters = [
+                ['all', `All (${battles.length})`],
+                ['upcoming', `Upcoming (${counts.upcoming || 0})`],
+                ['pending', `Awaiting (${counts.pending || 0})`],
+                ['completed', `Completed (${counts.completed || 0})`],
+                ['declined', `Declined (${counts.declined || 0})`]
+              ];
+              const shown = battleFilter === 'all' ? battles : battles.filter((b) => statusOf(b) === battleFilter);
               return (
-                <div key={b.id} className="vs">
-                  <Head><title>Admin · Battle Room</title></Head>
-                  <div className="side">{a ? a.name : '?'}</div>
-                  <div className="mid">VS</div>
-                  <div className="side b">{bb ? bb.name : '?'}</div>
-                  <div className="vs-actions">
-                    <span className="badge">{status}</span><br />
-                    <span className="dim">{new Date(b.datetime_utc).toLocaleString()}</span>
+                <>
+                  <div className="row" style={{ flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                    {filters.map(([key, label]) => (
+                      <button key={key} type="button" className={battleFilter === key ? 'btn' : 'btn ghost'}
+                        style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => setBattleFilter(key)}>{label}</button>
+                    ))}
                   </div>
-                </div>
+                  {shown.length === 0 ? (
+                    <p className="dim">{battles.length === 0 ? 'No battles yet.' : 'No battles match this filter.'}</p>
+                  ) : shown.map((b) => {
+                    const a = creators.find((c) => c.id === b.creator_a);
+                    const bb = creators.find((c) => c.id === b.creator_b);
+                    const label = { declined: 'Declined', completed: 'Completed', upcoming: 'Confirmed', pending: 'Pending' }[statusOf(b)];
+                    return (
+                      <div key={b.id} className="vs">
+                        <div className="side">{a ? a.name : '?'}</div>
+                        <div className="mid">VS</div>
+                        <div className="side b">{bb ? bb.name : '?'}</div>
+                        <div className="vs-actions">
+                          <span className="badge">{label}</span><br />
+                          <span className="dim">{new Date(b.datetime_utc).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
               );
-            })}
+            })()}
           </div>
         </>
       )}

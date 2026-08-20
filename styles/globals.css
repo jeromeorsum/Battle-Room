@@ -168,3 +168,12 @@ textarea:focus-visible,
 @media (max-width: 600px) {
   .app-header { padding-right: 52px; }
 }
+
+/* Admin dashboard "At a glance" insights */
+.insights-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+@media (max-width: 900px) { .insights-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 560px) { .insights-grid { grid-template-columns: repeat(2, 1fr); } }
