@@ -161,6 +161,15 @@ Roughly in the order that makes sense:
   Hobby caps you at 2 cron jobs / once-a-day. Once on Pro, add this to the
   "crons" array in vercel.json:
   `{ "path": "/api/cron/battle-reminders", "schedule": "*/15 * * * *" }`
+- **Set your real business contact email (replaces the placeholder).** The
+  Terms of Service and the Enterprise "contact sales" button now use a
+  placeholder, `support@battle-room.app`, instead of a personal address.
+  Before launch: (1) replace that placeholder with your real business email in
+  the code (one spot in pages/tos.js, one in pages/index.js — tell Claude the
+  address and it's a one-line change each), and (2) update the Vercel env vars
+  for outbound email — the Resend "from" address and the billing-alert
+  recipient (e.g. ADMIN_ALERT_EMAIL) — to that same business email. A
+  role-based address on your own domain (support@ or legal@) is best.
 - **Light stress test now / real one later** — a small burst test now is fine
   to confirm signups don't exhaust the free-tier DB connections. The *real*
   load test belongs AFTER you're on Vercel Pro + Supabase Pro, so you're

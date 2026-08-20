@@ -88,7 +88,7 @@ export default function Landing() {
                   {t.monthly && t.maxCreators ? `As low as $${(( (billingPeriod === 'yearly' ? t.yearly / 12 : t.monthly) ) / t.maxCreators).toFixed(2)}/creator` : 'Volume pricing available'}
                 </div>
                 <p className="dim" style={{ flexGrow: 1 }}>{t.blurb}</p>
-                <a href={t.monthly ? '/signup' : 'mailto:benjaminmilroy@gmail.com?subject=Battle%20Room%20Enterprise'} className={t.popular ? 'btn' : 'btn ghost'} style={{ display: 'block', textAlign: 'center', textDecoration: 'none', marginTop: 8 }}>
+                <a href={t.monthly ? '/signup' : 'mailto:support@battle-room.app?subject=Battle%20Room%20Enterprise'} className={t.popular ? 'btn' : 'btn ghost'} style={{ display: 'block', textAlign: 'center', textDecoration: 'none', marginTop: 8 }}>
                   {t.monthly ? 'Start free trial' : 'Contact us'}
                 </a>
               </div>

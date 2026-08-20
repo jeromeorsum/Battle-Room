@@ -35,7 +35,7 @@ export default function TOS() {
         organization that owns an agency account, and where context requires,
         to team members and creators using the Service under that agency.</p>
 
-        <h3>Eligibility — adults only</h3>
+        <h3>Eligibility — Adults Only</h3>
         <p>Battle Room is for adults. Every user — agency owners, team
         members, and creators — must be at least 18 years old. Signup and
         creator onboarding require an explicit age attestation, and agencies
@@ -110,17 +110,6 @@ export default function TOS() {
         accounts involved in self-referral schemes, fake signups, or other
         abuse of the referral program.</p>
 
-        <h3>Refunds</h3>
-        <p>We aim to handle refunds the fair way rather than the fine-print
-        way. If you were just charged for a renewal you meant to cancel,
-        contact us and we will refund that charge. If you forgot about the
-        account and have not been using it, we will refund recent unused
-        months. If something on our side goes seriously wrong — extended
-        downtime or an error that cost you money — we will issue a credit or
-        refund proportionate to the problem. To request a refund, email the
-        address at the bottom of this page from your agency&apos;s contact
-        email.</p>
-
         <h3>Cancellation and termination</h3>
         <p>You can cancel at any time, self-service, from the admin panel
         settings: cancelling your subscription stops future charges, and
@@ -129,8 +118,7 @@ export default function TOS() {
         and team logins. Deletion is immediate and cannot be undone, and we
         cannot recover that data afterward, so export anything you need
         before deleting. If you cancel partway through a billing period, we
-        do not automatically prorate the remainder, but see the Refunds
-        section above — we are reasonable about it.</p>
+        do not automatically prorate the remainder.</p>
         <p>We reserve the right to suspend or terminate accounts and refuse
         service for violations of these Terms, abuse of the Service (for
         example, attempting to access other agencies&apos; data, circumventing
@@ -200,7 +188,7 @@ export default function TOS() {
         without regard to its conflict-of-law rules. Any dispute arising out
         of or relating to these Terms or the Service that the parties cannot
         resolve informally will be brought exclusively in the state or
-        federal courts located in Ada County, Idaho, and you consent to
+        federal courts located in Canyon County, Idaho, and you consent to
         personal jurisdiction and venue there. Before filing anything, email
         us — most problems are faster to fix than to litigate.</p>
 
@@ -213,8 +201,8 @@ export default function TOS() {
         Service.</p>
 
         <p className="dim" style={{ marginTop: 24 }}>Questions about these
-        Terms? Email <a href="mailto:benjaminmilroy@gmail.com"
-        style={{ color: 'var(--cyan)' }}>benjaminmilroy@gmail.com</a>.</p>
+        Terms? Email <a href="mailto:support@battle-room.app"
+        style={{ color: 'var(--cyan)' }}>support@battle-room.app</a>.</p>
         <p className="dim" style={{ fontSize: 12, marginTop: 8 }}>Portions of
         these Terms are adapted from the 37signals open-source policies,
         used under CC BY 4.0.</p>

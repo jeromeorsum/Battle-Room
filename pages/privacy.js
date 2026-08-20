@@ -20,7 +20,7 @@ export default function Privacy() {
         <p>This platform is intended for adults only. Everyone who creates an account — agency admins, managers, and creators — must confirm they are 18 years of age or older before an account can be created. This is a self-reported confirmation, not independently verified.</p>
 
         <h3>Data retention</h3>
-        <p>If an agency's subscription is canceled, existing data remains viewable but no new data can be added. Contact us if you'd like your agency's data deleted entirely.</p>
+        <p>If an agency&apos;s subscription is canceled, existing data remains viewable but no new data can be added until you resubscribe. You can permanently delete your agency and all of its data (roster, battles, posts, and team logins) at any time from the admin panel — this is immediate, cannot be undone, and we cannot recover the data afterward, so export anything you need first.</p>
 
         <h3>Your rights</h3>
         <p>You can request access to, correction of, or deletion of your data by contacting your agency admin, or the platform owner if you are an agency admin yourself.</p>
