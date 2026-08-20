@@ -20,7 +20,14 @@ export default function Privacy() {
         <p>This platform is intended for adults only. Everyone who creates an account — agency admins, managers, and creators — must confirm they are 18 years of age or older before an account can be created. This is a self-reported confirmation, not independently verified.</p>
 
         <h3>Data retention</h3>
-        <p>If an agency&apos;s subscription is canceled, existing data remains viewable but no new data can be added until you resubscribe. You can permanently delete your agency and all of its data (roster, battles, posts, and team logins) at any time from the admin panel — this is immediate, cannot be undone, and we cannot recover the data afterward, so export anything you need first.</p>
+        <p>We keep your data only as long as we need it to provide the Service to you:</p>
+        <ul>
+          <li><b>While your account is active:</b> we retain your agency&apos;s data (roster, battles, posts, and team logins) so the Service works.</li>
+          <li><b>After you cancel:</b> your data stays in a view-only state so you can still see it, export it, or reactivate later. No new data can be added until you resubscribe.</li>
+          <li><b>Deletion you control:</b> an agency admin can permanently delete the agency and all of its data at any time from the admin panel. Deletion is immediate, cannot be undone, and we cannot recover the data afterward — so export anything you need first.</li>
+          <li><b>Dormant cancelled accounts:</b> if an account stays cancelled and inactive for 12 months or more, we may delete it and its data after emailing the contact address on file first, so you have a chance to export or reactivate.</li>
+          <li><b>Records we must keep:</b> we may retain limited billing and transaction records for longer where the law requires it (for example, tax and accounting records), and back-ups may persist for a short period before they cycle out.</li>
+        </ul>
 
         <h3>Your rights</h3>
         <p>You can request access to, correction of, or deletion of your data by contacting your agency admin, or the platform owner if you are an agency admin yourself.</p>

@@ -161,6 +161,22 @@ Roughly in the order that makes sense:
   Hobby caps you at 2 cron jobs / once-a-day. Once on Pro, add this to the
   "crons" array in vercel.json:
   `{ "path": "/api/cron/battle-reminders", "schedule": "*/15 * * * *" }`
+- **Auto-renewal compliance — partly handled, two items remain.** Done: a
+  clear-and-conspicuous auto-renewal disclosure now sits under the pricing
+  plans, the signup consent language is explicit, and cancellation is
+  self-service online (all core ARL/ROSCA expectations). Still to do:
+  (1) **Annual-plan renewal reminder** — New York (and similar states) require
+  a reminder 15-45 days before an annual subscription auto-renews. This needs a
+  scheduled job (like the battle-reminder cron, so it needs Vercel Pro) that
+  finds yearly subscriptions nearing renewal and emails the contact. Build it
+  before promoting the yearly plan heavily. (2) **Price-increase rule** — if you
+  ever raise a subscriber's price, several states require either fresh
+  affirmative consent or a 14-day penalty-free cancel window with a prorated
+  refund; handle that when you first change prices.
+  NOTE: most state auto-renewal laws (e.g. California's) apply to *consumers*,
+  and Battle Room is B2B (agencies), which likely narrows what strictly applies
+  — but complying anyway is cheap insurance. Confirm the specifics with your
+  attorney.
 - **Set your real business contact email (replaces the placeholder).** The
   Terms of Service and the Enterprise "contact sales" button now use a
   placeholder, `support@battle-room.app`, instead of a personal address.

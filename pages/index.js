@@ -95,6 +95,12 @@ export default function Landing() {
             );
           })}
         </div>
+        <p className="dim" style={{ textAlign: 'center', fontSize: 13, marginTop: 16, maxWidth: 620, marginLeft: 'auto', marginRight: 'auto' }}>
+          After your 14-day free trial, your plan continues automatically and renews
+          {' '}{billingPeriod === 'yearly' ? 'every year' : 'every month'} at the price shown above until you cancel.
+          You can cancel anytime, for free, online in your admin billing settings, or by emailing us — cancel before your
+          trial ends and you won&apos;t be charged. Prices are in USD.
+        </p>
       </div>
 
       <p className="dim" style={{ textAlign: 'center', marginTop: 30 }}>
