@@ -698,13 +698,23 @@ export default function Admin() {
           {showOnboarding && (creators.length === 0 || battles.length === 0) && (
             <div className="card" style={{ borderColor: 'var(--gold)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <h2>Getting Started</h2>
+                <h2>👋 Welcome to Battle Room</h2>
                 <button className="btn ghost" style={{ fontSize: 11, padding: '4px 10px' }} onClick={() => setShowOnboarding(false)}>Dismiss</button>
               </div>
+              <p className="dim" style={{ marginTop: 0 }}>Let&apos;s get your agency up and running. Here are your first steps:</p>
+              {agency.agency_code && (
+                <div style={{ background: 'var(--bg-raised)', border: '1px solid var(--line)', borderRadius: 8, padding: '12px 14px', margin: '4px 0 12px' }}>
+                  <div className="dim" style={{ fontSize: 12, marginBottom: 4 }}>Your agency code — share this so your creators can join</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <code style={{ fontSize: 20, fontWeight: 700, letterSpacing: 1, color: 'var(--gold)' }}>{agency.agency_code}</code>
+                    <button className="btn ghost" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => { navigator.clipboard.writeText(agency.agency_code); toast('Agency code copied — send it to your creators.', 'success'); }}>Copy</button>
+                  </div>
+                </div>
+              )}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div className="dim">{creators.length > 0 ? '✅' : '⬜'} Add your first creator (use the form below, or share your agency code so they can sign themselves up)</div>
-                <div className="dim">{battles.length > 0 ? '✅' : '⬜'} Book your first battle, or wait for a creator to send an invite</div>
-                <div className="dim">⬜ Save your agency code and admin code somewhere safe — there's no automatic recovery for the agency code itself</div>
+                <div className="dim">{creators.length > 0 ? '✅' : '1️⃣'} Add your first creator — use the form below, or share the agency code above so they can sign themselves up</div>
+                <div className="dim">{battles.length > 0 ? '✅' : '2️⃣'} Book your first battle, or wait for a creator to send an invite</div>
+                <div className="dim">3️⃣ Save your agency code and admin code somewhere safe — there&apos;s no automatic recovery for the agency code itself</div>
               </div>
             </div>
           )}
