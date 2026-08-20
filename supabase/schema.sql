@@ -216,3 +216,20 @@ create table if not exists error_logs (
   stack text,
   created_at timestamptz default now()
 );
+
+-- ---------------------------------------------------------------------------
+-- Performance indexes
+-- ---------------------------------------------------------------------------
+-- Postgres does NOT auto-index foreign keys, and every list query in this app
+-- filters by agency_id (and usually sorts by created_at / datetime_utc). Without
+-- these, those queries do a full table scan that gets linearly slower as data
+-- grows. Composite (agency_id, sort_col) indexes serve both the filter and the
+-- sort in one, and also cover plain agency_id lookups via the leftmost column.
+create index if not exists idx_creators_agency_created   on creators(agency_id, created_at);
+create index if not exists idx_battles_agency_datetime    on battles(agency_id, datetime_utc);
+create index if not exists idx_battles_datetime           on battles(datetime_utc);            -- global range scan for the reminder cron
+create index if not exists idx_posts_agency_created       on posts(agency_id, created_at);
+create index if not exists idx_agency_users_agency        on agency_users(agency_id);
+create index if not exists idx_audit_logs_agency_created  on audit_logs(agency_id, created_at);
+create index if not exists idx_agencies_stripe_sub        on agencies(stripe_subscription_id); -- webhook + reconcile lookups
+create index if not exists idx_agencies_referral          on agencies(referral_code);          -- referral credit lookups
