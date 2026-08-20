@@ -9,7 +9,7 @@ export default function TOS() {
       <Head><title>Terms of Service · Battle Room</title></Head>
       <div className="card">
         <h1>Terms of Service</h1>
-        <p className="dim" style={{ marginBottom: 16 }}>Last updated: August 17, 2026</p>
+        <p className="dim" style={{ marginBottom: 16 }}>Last updated: August 20, 2026</p>
 
         <p>When you create an agency, join a roster, or otherwise use Battle
         Room, you are agreeing to these Terms of Service (&quot;Terms&quot;).

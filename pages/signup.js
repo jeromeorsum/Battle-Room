@@ -171,7 +171,9 @@ export default function Signup() {
     <div className="wrap">
       <Head><title>Sign Up · Battle Room</title></Head>
       <h1>Set up your agency</h1>
-      <p className="dim">Start with a 14-day free trial — no card required until you're ready to subscribe.</p>
+      <p className="dim">{process.env.NEXT_PUBLIC_CARD_TRIAL === '1'
+        ? 'Start with a 14-day free trial. A card is required to start, but you won\u2019t be charged until the trial ends — cancel anytime before then and you won\u2019t pay a cent.'
+        : 'Start with a 14-day free trial — no card required until you\u2019re ready to subscribe.'}</p>
       <form className="card" style={{ maxWidth: 480 }} onSubmit={submit}>
         <div className="field"><label htmlFor="f-agency-name">Agency name</label><input id="f-agency-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
         <div className="field"><label htmlFor="f-contact-email">Contact email (required — for billing/account questions)</label><input id="f-contact-email" type="email" required value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} /></div>

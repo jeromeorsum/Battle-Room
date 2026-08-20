@@ -5,10 +5,10 @@ export default function Privacy() {
       <Head><title>Privacy Policy · Battle Room</title></Head>
       <div className="card">
         <h1>Privacy Policy</h1>
-        <p className="dim">Last updated: August 5, 2026. This is a placeholder — like the Terms of Service, it has not been reviewed by a lawyer and should not be relied on as-is before real agencies' data is involved.</p>
+        <p className="dim">Last updated: August 20, 2026. This is a placeholder — like the Terms of Service, it has not been reviewed by a lawyer and should not be relied on as-is before real agencies' data is involved.</p>
 
         <h3>What we collect</h3>
-        <p>Agency contact info (name, email, phone), creator profile info (nickname, handle, diamond counts, league, timezone, optional profile picture and gender), and battle/post activity within your agency.</p>
+        <p>Agency contact info (name, email, phone), creator profile info (nickname, handle, diamond counts, league, timezone, and optional gender), and battle/post activity within your agency.</p>
 
         <h3>Who can see it</h3>
         <p>Only people within your own agency can see your roster, battles, and posts. Other agencies on the platform never see your data. The platform owner (via the super admin role) can see aggregate info across agencies for support and billing purposes.</p>

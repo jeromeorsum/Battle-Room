@@ -26,10 +26,10 @@ export default function Compliance() {
       <div className="card">
         <h2>Known open items</h2>
         <ul style={{ paddingLeft: 20 }}>
-          <li className="dim">Minors: this platform is now 18+ only, enforced via a required self-attestation checkbox at signup (both for creators and for agencies adding a creator). This significantly reduces COPPA/teen-privacy exposure but is self-reported, not independently verified — real ID verification would be a stronger (and more expensive) step if ever needed. Worth confirming with a lawyer whether attestation alone is sufficient for your situation.</li>
-          <li className="dim">Two-tier users: creators are added by an agency and don't sign anything themselves. Whether an agency can bind them, or whether creators need their own agreement, hasn't been confirmed.</li>
-          <li className="dim">Auto-renewal disclosure requirements vary by state (California and New York have specific rules) — not yet reviewed.</li>
-          <li className="dim">Data deletion policy after cancellation is informal (view-only access, no automatic deletion) — may need a defined policy.</li>
+          <li className="dim">Minors: this platform is now 18+ only. Agency owners and self-signing-up creators confirm their age with a date of birth at signup; creators added by an admin must confirm their own age (date of birth) the first time they sign in, before they can use the account. This significantly reduces COPPA/teen-privacy exposure but is self-reported, not independently verified — real ID verification would be a stronger (and more expensive) step if ever needed. Worth confirming with a lawyer whether attestation alone is sufficient for your situation.</li>
+          <li className="dim">Two-tier users: creators added by an agency now confirm their own age on first sign-in, but they don&apos;t separately sign the Terms. Whether an agency can bind them, or whether creators need their own agreement, hasn&apos;t been confirmed with a lawyer.</li>
+          <li className="dim">Auto-renewal: a clear-and-conspicuous auto-renewal disclosure is now shown on the pricing page and at signup, with explicit consent and free self-service online cancellation. Still to do: an advance renewal reminder for annual plans (15&ndash;45 days before renewal, required by some states) and a price-increase consent/cancel flow. Most state auto-renewal laws target consumers, and this is B2B, which likely narrows applicability &mdash; confirm specifics with a lawyer.</li>
+          <li className="dim">Data deletion: a defined retention policy is now in the Privacy Policy &mdash; view-only after cancellation, admin-controlled permanent deletion at any time, a 12-month dormant-account deletion backstop with email notice, and a carve-out for records we must keep. Worth a lawyer&apos;s confirmation.</li>
         </ul>
       </div>
 

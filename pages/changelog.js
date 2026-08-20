@@ -1,4 +1,9 @@
 const CHANGES = [
+  { date: '2026-08-20', items: [
+    'Removed profile picture uploads — profiles now use clean letter avatars everywhere',
+    'Real league-based matchmaking, pre-battle reminders, and clearer battle scheduling',
+    'Expanded the Help & FAQ, smoother new-agency onboarding, and clearer billing disclosures'
+  ]},
   { date: '2026-08-05', items: [
     'Added an audit log for admin actions, CSV roster export, and an onboarding checklist for new agencies',
     'Added a proactive "Install App" prompt and a getting-started checklist',
