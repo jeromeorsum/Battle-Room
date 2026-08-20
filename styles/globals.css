@@ -177,3 +177,17 @@ textarea:focus-visible,
 }
 @media (max-width: 900px) { .insights-grid { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 560px) { .insights-grid { grid-template-columns: repeat(2, 1fr); } }
+
+/* Even 2x2 layout for the four "What you get" feature cards (was an auto-fit
+   grid that left one item orphaned on a second row). Collapses to 1 column
+   on small phones. */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px 32px;
+  margin-top: 16px;
+}
+.features-grid > div { min-width: 0; }
+@media (max-width: 560px) {
+  .features-grid { grid-template-columns: 1fr; gap: 16px; }
+}

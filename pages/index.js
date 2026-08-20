@@ -27,7 +27,7 @@ export default function Landing() {
 
       <div className="card">
         <h2 style={{ textAlign: 'center' }}>What you get</h2>
-        <div className="opp-grid">
+        <div className="features-grid">
           <div><b>Fair matchmaking</b><p className="dim">Auto-matches creators by diamonds, league, timezone, and battle type.</p></div>
           <div><b>Invite &amp; accept flow</b><p className="dim">Nobody's on a battle they didn't agree to.</p></div>
           <div><b>Real push notifications</b><p className="dim">Creators get alerted the moment a battle's proposed or confirmed.</p></div>

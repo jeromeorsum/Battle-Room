@@ -533,8 +533,8 @@ export default function Admin() {
 
           {loginMode === 'code' ? (
             <form onSubmit={submitLogin} onKeyDown={focusNext}>
-              <h2>Agency Admin Login</h2>
-              <p className="dim">Enter your agency code and your personal admin code.</p>
+              <h2>Agency Login</h2>
+              <p className="dim">Enter your agency code and your admin or manager code.</p>
               <div className="field"><label htmlFor="li-agency-code">Agency code</label><input id="li-agency-code" value={codes.agencyCode} onChange={(e) => setCodes({ ...codes, agencyCode: e.target.value.toUpperCase() })} placeholder="e.g. FALCON7X2" /></div>
               <div className="field"><label htmlFor="li-admin-code">Admin code</label>
                 <PasswordField id="li-admin-code" value={codes.adminCode} onChange={(e) => setCodes({ ...codes, adminCode: e.target.value })} placeholder="Admin code" />

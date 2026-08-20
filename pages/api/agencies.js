@@ -53,6 +53,7 @@ export default async function handler(req, res) {
   }
   if (String(adminCode).length < 8) return res.status(400).json({ error: 'Admin code must be at least 8 characters — this protects your whole roster.' });
   if (managerCode && String(managerCode).length < 8) return res.status(400).json({ error: 'Manager code must be at least 8 characters too.' });
+  if (managerCode && String(managerCode) === String(adminCode)) return res.status(400).json({ error: 'Your manager code must be different from your admin code — otherwise managers would get full admin access.' });
   if (!contactEmail || !contactPhone) return res.status(400).json({ error: 'Contact email and phone are both required.' });
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailPattern.test(contactEmail)) return res.status(400).json({ error: 'That doesn\u2019t look like a valid email address.' });

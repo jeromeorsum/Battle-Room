@@ -4,7 +4,7 @@ const LINKS = [
   { href: '/', label: '🏠 Home' },
   { href: '/app', label: '🔑 I Have an Agency Code' },
   { href: '/signup', label: '✍️ Sign Up My Agency' },
-  { href: '/admin', label: '🛠 Agency Admin Login' },
+  { href: '/admin', label: '🛠 Agency Login' },
   { href: '/help', label: '❓ Help & FAQ' },
   { href: '/feedback', label: '💬 Send Feedback' },
   { href: '/changelog', label: '📋 What\u2019s New' },

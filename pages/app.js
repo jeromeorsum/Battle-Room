@@ -334,8 +334,17 @@ function ProfileStep({ me, creators, agencyId, onCreate, onLogin, onSaved }) {
   }
 
   if (me) {
-    const completenessChecks = [me.handle, me.league, (me.tags || []).length > 0, me.gender];
-    const completenessPct = Math.round((completenessChecks.filter(Boolean).length / completenessChecks.length) * 100);
+    // Live completeness — based on the form values (not the saved profile), so
+    // the bar and the checklist update as the creator fills things in.
+    const completenessItems = [
+      { label: 'Handle', done: !!(form.handle && form.handle.trim()) },
+      { label: 'League', done: !!form.league },
+      { label: 'Battle types', done: (form.tags || []).length > 0 },
+      { label: 'Diamonds', done: Number(form.diamonds) > 0 },
+    ];
+    const doneCount = completenessItems.filter((i) => i.done).length;
+    const completenessPct = Math.round((doneCount / completenessItems.length) * 100);
+    const missing = completenessItems.filter((i) => !i.done);
     return (
       <form className="card" onSubmit={save} onKeyDown={focusNext}>
         <h2>My Profile</h2>
@@ -345,7 +354,13 @@ function ProfileStep({ me, creators, agencyId, onCreate, onLogin, onSaved }) {
             <div style={{ height: 6, borderRadius: 999, background: 'var(--bg-raised)', overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${completenessPct}%`, background: 'var(--gold)', transition: 'width .3s' }} />
             </div>
+            <div className="dim" style={{ fontSize: 12, marginTop: 6 }}>
+              Still to add: {missing.map((m) => m.label).join(', ')}
+            </div>
           </div>
+        )}
+        {completenessPct === 100 && (
+          <div className="dim" style={{ marginBottom: 14, fontSize: 12, color: 'var(--gold)' }}>✓ Profile complete — nice.</div>
         )}
         <div className="row">
           <div className="field" style={{ flex: 1 }}><label>Nickname</label><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
