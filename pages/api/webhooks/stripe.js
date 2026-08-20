@@ -157,6 +157,27 @@ export default async function handler(req, res) {
         const invoice = event.data.object;
         if (invoice.subscription) {
           await supabaseAdmin.from('agencies').update({ status: 'past_due' }).eq('stripe_subscription_id', invoice.subscription);
+          // Tell the owner so they can fix it — otherwise their account goes
+          // read-restricted silently and they churn without knowing why.
+          try {
+            const { data: agency } = await supabaseAdmin
+              .from('agencies').select('id, name, contact_email').eq('stripe_subscription_id', invoice.subscription).single();
+            if (agency?.contact_email) {
+              const origin = process.env.NEXT_PUBLIC_SITE_URL || 'https://battle-room.vercel.app';
+              await sendEmail({
+                to: agency.contact_email,
+                subject: 'Action needed: your Battle Room payment didn\u2019t go through',
+                html: `<p>Hi ${agency.name},</p>
+                       <p>We tried to charge your card for your Battle Room subscription, but the payment didn\u2019t go through. Your account is now limited until it\u2019s resolved.</p>
+                       <p>To fix it, update your payment method in your admin billing settings and we\u2019ll retry the charge:</p>
+                       <p><a href="${origin}/admin">Open billing settings</a></p>
+                       <p>If you think this is a mistake, just reply to this email and we\u2019ll help.</p>`
+              });
+              await logAudit(agency.id, 'System', 'Payment failed', 'Subscription payment failed; account set to past_due and owner notified');
+            }
+          } catch (err) {
+            await logError('webhook:payment_failed_email', err);
+          }
         }
         break;
       }
