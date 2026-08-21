@@ -610,7 +610,7 @@ function OpponentsStep({ me, creators, onPropose }) {
           <option value="name">Name (A-Z)</option>
         </select>
       </div>
-      {scored.length === 0 && <div className="empty">No creators match your search.</div>}
+      {scored.length === 0 && <div className="empty">No streamers match your search.</div>}
       <div className="opp-grid">
         {scored.map(({ s }) => (
           <div key={s.id} className="card">
@@ -769,7 +769,7 @@ function NeedsResponseCard({ b, me, nameOf, handleOf, onRespond, onRebuttal }) {
 }
 
 function exportBattlesCSV(battles, nameOf) {
-  const header = ['Creator A', 'Creator B', 'Date/Time (UTC)', 'Notes'];
+  const header = ['Streamer A', 'Streamer B', 'Date/Time (UTC)', 'Notes'];
   const rows = battles.map((b) => [nameOf(b.creator_a), nameOf(b.creator_b), new Date(b.datetime_utc).toLocaleString(), b.notes || '']);
   const escapeCell = (v) => `"${String(v).replace(/"/g, '""')}"`;
   const csv = [header, ...rows].map((row) => row.map(escapeCell).join(',')).join('\r\n');

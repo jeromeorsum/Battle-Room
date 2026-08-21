@@ -588,8 +588,8 @@ export default function Admin() {
               <h2>Agency Login</h2>
               <p className="dim">Enter your agency code and your admin or manager code.</p>
               <div className="field"><label htmlFor="li-agency-code">Agency code</label><input id="li-agency-code" value={codes.agencyCode} onChange={(e) => setCodes({ ...codes, agencyCode: e.target.value.toUpperCase() })} placeholder="e.g. FALCON7X2" /></div>
-              <div className="field"><label htmlFor="li-admin-code">Admin code</label>
-                <PasswordField id="li-admin-code" value={codes.adminCode} onChange={(e) => setCodes({ ...codes, adminCode: e.target.value })} placeholder="Admin code" />
+              <div className="field"><label htmlFor="li-admin-code">Admin / Manager code</label>
+                <PasswordField id="li-admin-code" value={codes.adminCode} onChange={(e) => setCodes({ ...codes, adminCode: e.target.value })} placeholder="Admin or manager code" />
               </div>
               <label style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '6px 0 12px' }}>
                 <input type="checkbox" checked={codes.remember} onChange={(e) => setCodes({ ...codes, remember: e.target.checked })} style={{ width: 'auto' }} />

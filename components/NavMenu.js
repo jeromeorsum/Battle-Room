@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 const LINKS = [
   { href: '/', label: '🏠 Home' },
-  { href: '/app', label: '🔑 I Have an Agency Code' },
+  { href: '/app', label: '🎥 Streamer Login' },
   { href: '/signup', label: '✍️ Sign Up My Agency' },
   { href: '/admin', label: '🛠 Agency Login' },
   { href: '/help', label: '❓ Help & FAQ' },
