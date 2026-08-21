@@ -46,10 +46,24 @@ export default async function handler(req, res) {
     // roster (and LFG board) a new creator ends up in, so it can't be
     // allowed to drift from a stale cookie.
     let agencyId;
+    let pendingInviteId = null; // set when joining via a single-use invite; burned just before insert
     if (agencyCode) {
-      const { data: agencyByCode } = await supabaseAdmin.from('agencies').select('id').eq('agency_code', agencyCode.trim().toUpperCase()).single();
-      if (!agencyByCode) return res.status(404).json({ error: 'That agency code is no longer valid — please re-enter it.' });
-      agencyId = agencyByCode.id;
+      const code = agencyCode.trim().toUpperCase();
+      // Try a single-use invite first.
+      const { data: invite } = await supabaseAdmin
+        .from('creator_invites').select('id, agency_id, status, expires_at').ilike('code', code).maybeSingle();
+      if (invite) {
+        if (invite.status !== 'pending') return res.status(400).json({ error: 'That invite code has already been used or was cancelled. Ask your agency for a new one.' });
+        if (new Date(invite.expires_at).getTime() < Date.now()) return res.status(400).json({ error: 'That invite code has expired — invites last 24 hours. Ask your agency for a new one.' });
+        agencyId = invite.agency_id;
+        pendingInviteId = invite.id;
+      } else {
+        // Fall back to the shared agency code — only if this agency allows it.
+        const { data: agencyByCode } = await supabaseAdmin.from('agencies').select('id, allow_shared_code').eq('agency_code', code).single();
+        if (!agencyByCode) return res.status(404).json({ error: 'That code is not valid — please re-enter it.' });
+        if (!agencyByCode.allow_shared_code) return res.status(403).json({ error: 'This agency uses invite codes to join. Ask your agency admin to send you an invite link.' });
+        agencyId = agencyByCode.id;
+      }
     } else {
       agencyId = await requireAgencyScope(req, res);
       if (!agencyId) return;
@@ -99,6 +113,20 @@ export default async function handler(req, res) {
     }
 
     const pin_hash = await bcrypt.hash(String(pin), 12);
+
+    // Claim the single-use invite atomically, immediately before creating the
+    // account, so two simultaneous signups can never redeem the same code.
+    if (pendingInviteId) {
+      const { data: claimed } = await supabaseAdmin
+        .from('creator_invites')
+        .update({ status: 'redeemed', redeemed_at: new Date().toISOString() })
+        .eq('id', pendingInviteId).eq('status', 'pending')
+        .select('id');
+      if (!claimed || claimed.length === 0) {
+        return res.status(409).json({ error: 'That invite code was just used. Ask your agency for a new one.' });
+      }
+    }
+
     const { data, error } = await supabaseAdmin
       .from('creators')
       .insert({
@@ -110,7 +138,14 @@ export default async function handler(req, res) {
       })
       .select('id, name, handle, diamonds, league, tz, tags, avatar_url, gender')
       .single();
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+      // Account creation failed after we claimed the invite — release it so it
+      // isn't wasted.
+      if (pendingInviteId) await supabaseAdmin.from('creator_invites').update({ status: 'pending', redeemed_at: null }).eq('id', pendingInviteId);
+      return res.status(500).json({ error: error.message });
+    }
+    // Record who redeemed the invite.
+    if (pendingInviteId) await supabaseAdmin.from('creator_invites').update({ redeemed_by: data.id }).eq('id', pendingInviteId);
 
     // Creating a profile logs you in immediately, same as before.
     setSessionCookie(res, COOKIES.CREATOR, { creatorId: data.id, agencyId }, 60 * 60 * 24 * 30);

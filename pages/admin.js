@@ -40,6 +40,10 @@ export default function Admin() {
   const [managerCodeMsg, setManagerCodeMsg] = useState('');
   const [accentColor, setAccentColor] = useState('');
   const [referralCopied, setReferralCopied] = useState(false);
+  const [invites, setInvites] = useState([]);
+  const [creatorInviteForm, setCreatorInviteForm] = useState({ count: 1, label: '' });
+  const [creatorInviteMsg, setCreatorInviteMsg] = useState('');
+  const [inviteBusy, setInviteBusy] = useState(false);
   const [accentMsg, setAccentMsg] = useState('');
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotForm, setForgotForm] = useState({ agencyCode: '', contactEmail: '' });
@@ -251,6 +255,53 @@ export default function Admin() {
     } catch (e) { console.error('loadRoster failed', e); }
   }
 
+  async function loadInvites() {
+    try {
+      const res = await fetch('/api/invites');
+      if (res.ok) { const d = await res.json(); setInvites(d.invites || []); }
+    } catch (e) { console.error('loadInvites failed', e); }
+  }
+
+  async function generateInvites(e) {
+    if (e) e.preventDefault();
+    setCreatorInviteMsg(''); setInviteBusy(true);
+    try {
+      const res = await fetch('/api/invites', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ count: Number(creatorInviteForm.count) || 1, label: creatorInviteForm.label })
+      });
+      const d = await res.json();
+      if (!res.ok) { setCreatorInviteMsg(d.error || 'Could not generate invites.'); setInviteBusy(false); return; }
+      setCreatorInviteForm({ count: 1, label: '' });
+      await loadInvites();
+      toast(`${d.invites.length} invite code${d.invites.length > 1 ? 's' : ''} created.`);
+    } catch (err) {
+      setCreatorInviteMsg('Could not reach the server — try again.');
+    } finally { setInviteBusy(false); }
+  }
+
+  async function revokeInvite(id) {
+    const ok = await confirmModal('Revoke this invite? The code will stop working.');
+    if (!ok) return;
+    const res = await fetch(`/api/invites/${id}`, { method: 'DELETE' });
+    if (res.ok) { loadInvites(); toast('Invite revoked.'); }
+    else { const d = await res.json().catch(() => ({})); toast(d.error || 'Could not revoke.', 'error'); }
+  }
+
+  function copyInvite(code) {
+    const link = `${window.location.origin}/app?invite=${code}`;
+    navigator.clipboard.writeText(link);
+    toast('Invite link copied — send it to your creator.');
+  }
+
+  async function toggleSharedCode(next) {
+    const res = await fetch('/api/admin/shared-code-toggle', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ allow: next })
+    });
+    if (res.ok) { setAgency((a) => ({ ...a, allow_shared_code: next })); toast(next ? 'Shared agency code enabled.' : 'Shared code off — invites only.'); }
+    else { const d = await res.json().catch(() => ({})); toast(d.error || 'Could not update.', 'error'); }
+  }
+
   function exportRosterCSV() {
     const header = ['Nickname', 'Handle', 'Diamonds (30d)', 'League', 'Timezone', 'Battle Types', 'Gender'];
     const rows = creators.map((c) => [
@@ -285,6 +336,7 @@ export default function Admin() {
 
   useEffect(() => {
     if (agency?.id && adminTab === 'settings' && agency.role !== 'manager') loadTeam();
+    if (agency?.id && adminTab === 'dashboard') loadInvites();
   }, [agency?.id, adminTab]);
 
   function savePreset() {
@@ -774,6 +826,58 @@ export default function Admin() {
             </label>
             <button className="btn" type="submit" disabled={!addAgeAttested}>Add to Roster</button>
           </form>
+
+          <div className="card">
+            <h2>Invite creators</h2>
+            <p className="dim">Send each creator a single-use invite link — it works for exactly one signup and expires after 24 hours. Onboarding a whole roster at once? Generate a batch.</p>
+            <form onSubmit={generateInvites} className="row" style={{ alignItems: 'flex-end' }}>
+              <div className="field" style={{ maxWidth: 120 }}><label>How many</label>
+                <input type="number" min={1} max={100} value={creatorInviteForm.count} onChange={(e) => setCreatorInviteForm({ ...creatorInviteForm, count: e.target.value })} />
+              </div>
+              <div className="field" style={{ flex: 1 }}><label>Label (optional — e.g. a name, so you can track who each code went to)</label>
+                <input value={creatorInviteForm.label} onChange={(e) => setCreatorInviteForm({ ...creatorInviteForm, label: e.target.value })} placeholder="e.g. Mia, or 'March batch'" />
+              </div>
+              <button className="btn" type="submit" disabled={inviteBusy}>{inviteBusy ? 'Generating…' : 'Generate'}</button>
+            </form>
+            {creatorInviteMsg && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{creatorInviteMsg}</p>}
+
+            {invites.length > 0 && (
+              <div style={{ marginTop: 14 }}>
+                {invites.map((inv) => {
+                  const isPending = inv.status === 'pending';
+                  const statusColor = inv.status === 'redeemed' ? 'var(--gold)' : inv.status === 'pending' ? 'var(--cyan)' : 'var(--dim, #888)';
+                  return (
+                    <div key={inv.id} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', background: 'var(--bg-raised)', border: '1px solid var(--line)', borderRadius: 8, padding: '8px 12px', marginBottom: 6 }}>
+                      <code style={{ fontWeight: 700, letterSpacing: 1, color: isPending ? 'var(--gold)' : 'var(--text)' }}>{inv.code}</code>
+                      {inv.label && <span className="dim" style={{ fontSize: 12 }}>{inv.label}</span>}
+                      <span style={{ fontSize: 11, color: statusColor, textTransform: 'capitalize' }}>{inv.status}</span>
+                      <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+                        {isPending && <button className="btn ghost" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => copyInvite(inv.code)}>Copy link</button>}
+                        {isPending && <button className="btn ghost" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => revokeInvite(inv.id)}>Revoke</button>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {!isManager && (
+              <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
+                <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={!!agency.allow_shared_code} onChange={(e) => toggleSharedCode(e.target.checked)} style={{ width: 'auto', marginTop: 3 }} />
+                  <span className="dim" style={{ fontSize: 13 }}>
+                    <b style={{ color: 'var(--text)' }}>Also allow joining with the shared agency code</b><br />
+                    When on, anyone with your agency code ({agency.agency_code}) can create a profile — easy for bulk group-sharing, but the same code can be reused many times. When off (recommended), the only way in is a single-use invite.
+                  </span>
+                </label>
+              </div>
+            )}
+            {isManager && (
+              <p className="dim" style={{ fontSize: 12, marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
+                Joining method: {agency.allow_shared_code ? 'invites and the shared agency code' : 'invite-only'}. Only an admin can change this.
+              </p>
+            )}
+          </div>
 
           <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>

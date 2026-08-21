@@ -17,7 +17,7 @@ export default async function handler(req, res) {
 
   const { data: agency, error } = await supabaseAdmin
     .from('agencies')
-    .select('id, name, agency_code, admin_code_hash, manager_code_hash, status, plan_tier, billing_period, max_creators, trial_ends_at, referral_code, accent_color, stripe_current_period_end, stripe_cancel_at_period_end')
+    .select('id, name, agency_code, allow_shared_code, admin_code_hash, manager_code_hash, status, plan_tier, billing_period, max_creators, trial_ends_at, referral_code, accent_color, stripe_current_period_end, stripe_cancel_at_period_end')
     .eq('agency_code', normalized)
     .single();
 

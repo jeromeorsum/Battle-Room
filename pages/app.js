@@ -49,6 +49,15 @@ export default function Home() {
   }
 
   useEffect(() => {
+    // Pre-fill the code from an invite link (/app?invite=CODE).
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const codeParam = params.get('invite') || params.get('code');
+      if (codeParam) setAgencyCodeInput(codeParam.trim().toUpperCase());
+    }
+  }, []);
+
+  useEffect(() => {
     (async () => {
       try {
         const sessRes = await fetch('/api/session');
@@ -141,9 +150,9 @@ export default function Home() {
         <Head><title>Live Schedule · Battle Room</title></Head>
         <h1>BATTLE ROOM</h1>
         <form className="card" style={{ maxWidth: 380 }} onSubmit={joinAgency}>
-          <h2>Enter your agency code</h2>
-          <p className="dim">Your agency manager gives you this code — it's how Battle Room keeps your roster separate from every other agency on the platform.</p>
-          <input value={agencyCodeInput} onChange={(e) => setAgencyCodeInput(e.target.value.toUpperCase())} placeholder="e.g. FALCON7X2" />
+          <h2>Enter your code</h2>
+          <p className="dim">Your agency sends you an invite code (or an agency code). Enter it here to set up your profile.</p>
+          <input value={agencyCodeInput} onChange={(e) => setAgencyCodeInput(e.target.value.toUpperCase())} placeholder="Invite or agency code" />
           {agencyError && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{agencyError}</p>}
           <button className="btn" type="submit" style={{ marginTop: 10 }}>Continue</button>
           <p className="dim" style={{ marginTop: 14 }}>Running an agency? <a href="/signup" style={{ color: 'var(--cyan)' }}>Sign up here</a> to get your own code.</p>

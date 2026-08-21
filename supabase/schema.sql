@@ -238,3 +238,24 @@ create index if not exists idx_agencies_referral          on agencies(referral_c
 -- multiple accounts under the same handle, and backs up the app-layer check.
 create unique index if not exists idx_creators_agency_handle_unique
   on creators (agency_id, lower(handle)) where handle is not null and trim(handle) <> '';
+
+-- Single-use creator invites (Option C: invites are the default way to join;
+-- the shared agency code is off by default per agency, admin-toggleable).
+-- Each invite is one signup, expires 24h after creation, optional label.
+create table if not exists creator_invites (
+  id uuid primary key default gen_random_uuid(),
+  agency_id uuid not null references agencies(id) on delete cascade,
+  code text not null,
+  label text,
+  status text not null default 'pending',   -- pending | redeemed | revoked (expired is derived from expires_at)
+  redeemed_by uuid references creators(id) on delete set null,
+  created_at timestamptz default now(),
+  expires_at timestamptz not null,
+  redeemed_at timestamptz
+);
+create unique index if not exists idx_creator_invites_code on creator_invites (upper(code));
+create index if not exists idx_creator_invites_agency on creator_invites (agency_id, created_at);
+-- allow_shared_code: whether the plain shared agency code still works for
+-- joining. Off by default (invite-only); existing agencies grandfathered to true.
+-- Only an admin (not a manager) can change it.
+alter table agencies add column if not exists allow_shared_code boolean default false;
