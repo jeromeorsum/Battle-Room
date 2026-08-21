@@ -30,6 +30,17 @@ export default async function handler(req, res) {
     };
     if (avatar_url !== undefined) update.avatar_url = avatar_url || null;
     if (gender !== undefined) update.gender = gender || null;
+
+    // Handles are unique per agency — don't let an edit collide with another
+    // creator's handle (excluding this creator's own record).
+    if (cleanHandle) {
+      const { data: clash } = await supabaseAdmin
+        .from('creators').select('id').eq('agency_id', creator.agency_id).ilike('handle', cleanHandle).neq('id', id).limit(1);
+      if (clash && clash.length > 0) {
+        return res.status(409).json({ error: 'Another creator in this agency already uses that handle. Handles must be unique.' });
+      }
+    }
+
     if (pin) {
       if (String(pin).length < 6) return res.status(400).json({ error: 'PIN must be at least 6 characters.' });
       // If you're changing your own PIN, you must prove you know the

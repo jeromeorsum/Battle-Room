@@ -233,3 +233,8 @@ create index if not exists idx_agency_users_agency        on agency_users(agency
 create index if not exists idx_audit_logs_agency_created  on audit_logs(agency_id, created_at);
 create index if not exists idx_agencies_stripe_sub        on agencies(stripe_subscription_id); -- webhook + reconcile lookups
 create index if not exists idx_agencies_referral          on agencies(referral_code);          -- referral credit lookups
+
+-- One active profile per handle, per agency — stops a creator from making
+-- multiple accounts under the same handle, and backs up the app-layer check.
+create unique index if not exists idx_creators_agency_handle_unique
+  on creators (agency_id, lower(handle)) where handle is not null and trim(handle) <> '';

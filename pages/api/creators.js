@@ -76,6 +76,15 @@ export default async function handler(req, res) {
 
     if (cleanHandle) {
       const normalized_handle = cleanHandle.toLowerCase();
+      // One active profile per handle, per agency. Stops a creator from
+      // spinning up multiple accounts under the same handle (and makes the
+      // removed-handle block below actually meaningful).
+      const { data: existingHandle } = await supabaseAdmin
+        .from('creators').select('id').eq('agency_id', agencyId).ilike('handle', cleanHandle).limit(1);
+      if (existingHandle && existingHandle.length > 0) {
+        return res.status(409).json({ error: 'A creator with that handle already exists in this agency. Handles must be unique.' });
+      }
+
       const { data: blocked } = await supabaseAdmin
         .from('removed_creators').select('normalized_handle').eq('agency_id', agencyId).eq('normalized_handle', normalized_handle).single();
       if (blocked) {
