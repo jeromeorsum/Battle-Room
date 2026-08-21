@@ -13,7 +13,7 @@ const CHANGES = [
   ]},
   { date: '2026-08-04', items: [
     'Rebuilt as a real multi-tenant platform: isolated agencies, agency/admin codes, and a super admin dashboard',
-    'Added Stripe billing scaffolding and automated subscription cutoff enforcement',
+    'Added Stripe billing and automated subscription enforcement',
     'Added a full security pass: rate limiting, session cookies, PIN/code hashing, and security headers',
     'Made the site mobile-responsive with a real timezone-aware date/time picker',
     'Added the "Find a Battle" community post board'

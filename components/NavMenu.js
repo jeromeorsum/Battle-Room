@@ -9,7 +9,6 @@ const LINKS = [
   { href: '/feedback', label: '💬 Send Feedback' },
   { href: '/changelog', label: '📋 What\u2019s New' },
   { href: '/status', label: '🟢 System Status' },
-  { href: '/compliance', label: '📜 Compliance' }
 ];
 
 export default function NavMenu() {
