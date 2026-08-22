@@ -16,7 +16,7 @@ export default function Landing() {
         <p className="dim" style={{ fontSize: 16 }}>Schedule live PK battles across your whole agency — matched by diamonds, league, and timezone.</p>
         <div className="row" style={{ justifyContent: 'center', marginTop: 16 }}>
           <a href="/signup" className="btn" style={{ textDecoration: 'none' }}>Start your agency's trial</a>
-          <a href="/app" className="btn ghost" style={{ textDecoration: 'none' }}>I have an agency code</a>
+          <a href="/app" className="btn ghost" style={{ textDecoration: 'none' }}>Streamer Login</a>
         </div>
         {stats && (stats.agencies > 0 || stats.creators > 0) && (
           <p className="dim" style={{ marginTop: 18, fontSize: 13 }}>

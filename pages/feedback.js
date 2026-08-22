@@ -33,14 +33,14 @@ export default function Feedback() {
     <div className="wrap">
       <Head><title>Feedback · Battle Room</title></Head>
       <h1>Send Feedback</h1>
-      <form className="card" style={{ maxWidth: 480 }} onSubmit={submit}>
-        <p className="dim">Found a bug, or have an idea? Tell us here — it goes straight to the team.</p>
+      <form className="card" onSubmit={submit}>
+        <p className="dim" style={{ marginTop: 0 }}>Found a bug or have an idea? Tell us here — it goes straight to the team. If you&apos;re reporting a bug, a quick note on what you were doing when it happened helps a lot.</p>
         <div className="field">
           <label>Your message</label>
           <textarea rows={6} value={message} onChange={(e) => setMessage(e.target.value)} maxLength={2000} placeholder="What happened, or what would you like to see?" />
         </div>
         {error && <p style={{ color: 'var(--pink)', fontSize: 12 }}>{error}</p>}
-        <button className="btn" type="submit">Send</button>
+        <button className="btn" type="submit">Send Feedback</button>
       </form>
     </div>
   );
