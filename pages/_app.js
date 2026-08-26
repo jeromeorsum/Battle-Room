@@ -34,7 +34,7 @@ export default function App({ Component, pageProps }) {
     <>
       <Head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        <title>Battle Room — Live Creator Battles for Agencies</title>
+        <title>Battle Room — Schedule Live PK Battles for Agencies</title>
       </Head>
       <NavMenu />
       <a href="#main-content" className="skip-link">Skip to main content</a>
