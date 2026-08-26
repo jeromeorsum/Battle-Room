@@ -29,6 +29,8 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     const { name, handle, diamonds, league, tz, tags, pin, gender, agencyCode, ageAttested, dateOfBirth } = req.body;
     if (!name || !pin) return res.status(400).json({ error: 'Name and PIN are required.' });
+    if (String(name).trim().length > 60) return res.status(400).json({ error: 'Name is too long (max 60 characters).' });
+    if (handle && String(handle).trim().length > 50) return res.status(400).json({ error: 'Handle is too long (max 50 characters).' });
     if (String(pin).length < 6) return res.status(400).json({ error: 'PIN must be at least 6 characters.' });
     if (!ageAttested) return res.status(400).json({ error: 'You must confirm you are 18 or older to create an account on this platform.' });
     // A creator signing themselves up (they entered an agency code) verifies
@@ -131,8 +133,8 @@ export default async function handler(req, res) {
       .from('creators')
       .insert({
         agency_id: agencyId, name, handle: cleanHandle,
-        diamonds: diamonds || 0, league: league || null, tz: tz || 'ET',
-        tags: tags || [], gender: gender || null, pin_hash,
+        diamonds: diamonds || 0, league: league ? String(league).slice(0, 40) : null, tz: tz ? String(tz).slice(0, 40) : 'ET',
+        tags: Array.isArray(tags) ? tags.slice(0, 20) : [], gender: gender ? String(gender).slice(0, 40) : null, pin_hash,
         age_attested: true, age_attested_at: new Date().toISOString(), date_of_birth: dateOfBirth || null,
         age_self_confirmed: !!agencyCode
       })

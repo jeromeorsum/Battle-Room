@@ -23,10 +23,12 @@ export default async function handler(req, res) {
 
   if (req.method === 'PUT') {
     const { name, handle, diamonds, league, tz, tags, pin, currentPin, avatar_url, gender } = req.body;
+    if (name && String(name).trim().length > 60) return res.status(400).json({ error: 'Name is too long (max 60 characters).' });
+    if (handle && String(handle).trim().length > 50) return res.status(400).json({ error: 'Handle is too long (max 50 characters).' });
     const cleanHandle = handle ? handle.trim().replace(/^@+/, '') : null;
     const update = {
       name, handle: cleanHandle,
-      diamonds: diamonds || 0, league: league || null, tz: tz || 'ET', tags: tags || []
+      diamonds: diamonds || 0, league: league ? String(league).slice(0, 40) : null, tz: tz ? String(tz).slice(0, 40) : 'ET', tags: Array.isArray(tags) ? tags.slice(0, 20) : []
     };
     if (avatar_url !== undefined) update.avatar_url = avatar_url || null;
     if (gender !== undefined) update.gender = gender || null;
