@@ -192,3 +192,44 @@ textarea:focus-visible,
 @media (max-width: 560px) {
   .features-grid { grid-template-columns: 1fr; gap: 16px; }
 }
+
+/* Stylized "your schedule" preview on the homepage — gives a taste of the
+   organized battle schedule without needing a real screenshot. */
+.schedule-preview {
+  max-width: 560px;
+  margin: 24px auto 0;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px;
+}
+.schedule-preview-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.schedule-preview-live { color: var(--gold); font-size: 12px; font-weight: 600; }
+.schedule-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--bg);
+  margin-bottom: 6px;
+}
+.schedule-row:last-child { margin-bottom: 0; }
+.schedule-vs { font-size: 14px; }
+.schedule-vs b { color: var(--text); }
+.schedule-when { font-size: 12px; margin-left: auto; }
+.schedule-tag { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+.schedule-tag-ok { background: rgba(37, 244, 238, 0.12); color: var(--cyan); }
+.schedule-tag-wait { background: rgba(255, 212, 71, 0.14); color: var(--gold); }
+@media (max-width: 520px) {
+  .schedule-when { margin-left: 0; width: 100%; }
+}

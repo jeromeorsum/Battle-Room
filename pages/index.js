@@ -37,26 +37,51 @@ export default function Landing() {
 
       <div className="card">
         <h2 style={{ textAlign: 'center' }}>How it works</h2>
+        <p className="dim" style={{ textAlign: 'center', maxWidth: 620, margin: '0 auto 8px' }}>
+          Coordinating battles across a big roster usually turns into a mess of DMs, screenshots, and missed times. Battle Room keeps every match, time, and reminder in one organized place.
+        </p>
         <div className="how-grid">
           <div className="how-step">
             <span className="how-num" aria-hidden="true">1</span>
             <b>Create your agency</b>
-            <p className="dim">Start a free trial and get your own private agency space. You get an admin code to manage everything and an agency code to share with your creators.</p>
+            <p className="dim">Start a free trial and get your own private space, with an admin code to run everything and a manager code for your staff.</p>
           </div>
           <div className="how-step">
             <span className="how-num" aria-hidden="true">2</span>
-            <b>Add your creators</b>
-            <p className="dim">Add creators yourself, or share your agency code so they sign themselves up with a nickname and a PIN. Their diamonds, league, and timezone drive the matchmaking.</p>
+            <b>Add your streamers</b>
+            <p className="dim">Send single-use invite links, or bulk-onboard your whole roster at once. Each streamer&apos;s diamonds, league, and timezone power the matchmaking.</p>
           </div>
           <div className="how-step">
             <span className="how-num" aria-hidden="true">3</span>
-            <b>Match &amp; schedule battles</b>
-            <p className="dim">Find fair opponents by diamonds, league, timezone, and battle type — then propose a time. Nobody lands on a battle they didn't accept.</p>
+            <b>Match &amp; schedule</b>
+            <p className="dim">Find a fair opponent in seconds by diamonds, league, timezone, and battle type — propose a time, and both streamers confirm. No one lands on a battle they didn&apos;t agree to.</p>
           </div>
           <div className="how-step">
             <span className="how-num" aria-hidden="true">4</span>
-            <b>Everyone gets reminded</b>
-            <p className="dim">Once a battle is confirmed, both creators get push notifications and calendar invites, so no one misses a scheduled PK.</p>
+            <b>Stay organized</b>
+            <p className="dim">Confirmed battles send push notifications and calendar invites automatically, and your whole roster&apos;s schedule lives in one clean view — nothing slips.</p>
+          </div>
+        </div>
+
+        <div className="schedule-preview" aria-hidden="true">
+          <div className="schedule-preview-head">
+            <span>Your battle schedule</span>
+            <span className="schedule-preview-live">● 3 upcoming</span>
+          </div>
+          <div className="schedule-row">
+            <div className="schedule-vs"><b>@miachen</b> <span className="dim">vs</span> <b>@jaylenr</b></div>
+            <div className="dim schedule-when">Today · 8:00 PM ET</div>
+            <span className="schedule-tag schedule-tag-ok">Confirmed</span>
+          </div>
+          <div className="schedule-row">
+            <div className="schedule-vs"><b>@destiny</b> <span className="dim">vs</span> <b>@kingtee</b></div>
+            <div className="dim schedule-when">Tomorrow · 6:30 PM PT</div>
+            <span className="schedule-tag schedule-tag-ok">Confirmed</span>
+          </div>
+          <div className="schedule-row">
+            <div className="schedule-vs"><b>@ari</b> <span className="dim">vs</span> <b>@nova</b></div>
+            <div className="dim schedule-when">Fri · 9:00 PM ET</div>
+            <span className="schedule-tag schedule-tag-wait">Awaiting reply</span>
           </div>
         </div>
         <div className="row" style={{ justifyContent: 'center', marginTop: 20 }}>

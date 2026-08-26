@@ -19,11 +19,13 @@ export default function Document() {
         <meta property="og:site_name" content="Battle Room" />
         <meta property="og:title" content="Battle Room" />
         <meta property="og:description" content="Book and manage live creator battles for your agency, all in one place." />
-        <meta property="og:image" content="https://battle-room.vercel.app/icon-192.png" />
-        <meta name="twitter:card" content="summary" />
+        <meta property="og:image" content="https://battle-room.vercel.app/og-image.png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Battle Room" />
         <meta name="twitter:description" content="Book and manage live creator battles for your agency, all in one place." />
-        <meta name="twitter:image" content="https://battle-room.vercel.app/icon-192.png" />
+        <meta name="twitter:image" content="https://battle-room.vercel.app/og-image.png" />
       </Head>
       <body>
         <Main />
