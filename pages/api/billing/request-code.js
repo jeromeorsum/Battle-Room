@@ -28,7 +28,7 @@ export default async function handler(req, res) {
   try {
     await sendEmail({
       to: agency.contact_email,
-      subject: 'Your Battle Room billing verification code',
+      subject: 'Your Battle Room Clash billing verification code',
       html: `<p>Your code is:</p><h2 style="letter-spacing:4px;">${code}</h2><p>This expires in 10 minutes. If you didn't request this, you can ignore this email.</p>`
     });
   } catch (err) {

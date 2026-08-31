@@ -147,8 +147,8 @@ export default function Home() {
   if (!agency) {
     return (
       <div className="wrap">
-        <Head><title>Live Schedule · Battle Room</title></Head>
-        <h1>BATTLE ROOM</h1>
+        <Head><title>Live Schedule · Battle Room Clash</title></Head>
+        <h1>BATTLE ROOM CLASH</h1>
         <form className="card" style={{ maxWidth: 380 }} onSubmit={joinAgency}>
           <h2>Enter your code</h2>
           <p className="dim">Your agency sends you an invite code (or an agency code). Enter it here to set up your profile.</p>
@@ -169,7 +169,7 @@ export default function Home() {
     <div className="wrap">
       <header className="app-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
         <div>
-          <h1>BATTLE ROOM</h1>
+          <h1>BATTLE ROOM CLASH</h1>
           <div className="dim">{agency.name} · Live PK Schedule</div>
         </div>
         <div className="dim" style={{ textAlign: 'right' }}>
@@ -286,7 +286,7 @@ function AgeGate({ onConfirmed, onCancel }) {
 
   return (
     <div className="wrap">
-      <Head><title>Confirm your age · Battle Room</title></Head>
+      <Head><title>Confirm your age · Battle Room Clash</title></Head>
       <div className="card" style={{ maxWidth: 480, margin: '40px auto' }}>
         <h2>One quick step</h2>
         <p className="dim">Your agency set up this account for you. Before you can use it, please confirm your own age. This platform is for adults only (18+).</p>
@@ -849,7 +849,7 @@ function BattlesStep({ me, creators, battles, onChange, onFindOpponent }) {
 
   return (
     <div>
-      <Head><title>Live Schedule · Battle Room</title></Head>
+      <Head><title>Live Schedule · Battle Room Clash</title></Head>
       <form className="card" onSubmit={sendInvite} onKeyDown={focusNext}>
         <h2>Invite Someone to Battle</h2>
         <div className="row">

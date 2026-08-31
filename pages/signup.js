@@ -121,7 +121,7 @@ export default function Signup() {
 
   function downloadCode() {
     const blob = new Blob([
-      `Battle Room — ${result.name}\n\nAgency Code: ${result.agency_code}\n\nKeep this somewhere safe (a password manager is best). Anyone with this code plus an admin code can manage your agency.\n`
+      `Battle Room Clash — ${result.name}\n\nAgency Code: ${result.agency_code}\n\nKeep this somewhere safe (a password manager is best). Anyone with this code plus an admin code can manage your agency.\n`
     ], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -134,7 +134,7 @@ export default function Signup() {
     const trialEnd = result.trial_ends_at ? new Date(result.trial_ends_at).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) : null;
     return (
       <div className="wrap">
-        <Head><title>Sign Up · Battle Room</title></Head>
+        <Head><title>Sign Up · Battle Room Clash</title></Head>
         <div className="card" style={{ maxWidth: 480, margin: '60px auto' }}>
           <h2>You're set up 🎉</h2>
           {trialEnd && <p className="dim">Your 14-day free trial runs through <b style={{ color: 'var(--gold)' }}>{trialEnd}</b>.</p>}
@@ -169,7 +169,7 @@ export default function Signup() {
 
   return (
     <div className="wrap">
-      <Head><title>Sign Up · Battle Room</title></Head>
+      <Head><title>Sign Up · Battle Room Clash</title></Head>
       <h1>Set up your agency</h1>
       <p className="dim">{process.env.NEXT_PUBLIC_CARD_TRIAL === '1'
         ? 'Start with a 14-day free trial. A card is required to start, but you won\u2019t be charged until the trial ends — cancel anytime before then and you won\u2019t pay a cent.'
@@ -251,7 +251,7 @@ export default function Signup() {
               <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 12 }}>
                 <input type="checkbox" checked={billingConsent} onChange={(e) => setBillingConsent(e.target.checked)} style={{ width: 'auto', marginTop: 3 }} />
                 <span style={{ fontSize: 12 }}>
-                  I authorize Battle Room to charge my payment method <b>${tier.monthly} per month</b>, automatically and
+                  I authorize Battle Room Clash to charge my payment method <b>${tier.monthly} per month</b>, automatically and
                   on a recurring basis, starting when my 14-day free trial ends, until I cancel. I understand I can
                   cancel anytime for free before then and will not be charged.
                 </span>

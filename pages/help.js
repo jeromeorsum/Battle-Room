@@ -5,13 +5,13 @@ const CATEGORIES = [
   {
     name: 'Getting Started',
     faqs: [
-      { q: 'What is Battle Room?', a: 'Battle Room is a scheduling tool for agencies that run live PK battles between their creators. You add your creators, find fair opponents by diamonds, league, and timezone, propose a time, and everyone gets notified and a calendar invite once it\u2019s confirmed. Think of it as matchmaking + a shared schedule for your whole roster.' },
+      { q: 'What is Battle Room Clash?', a: 'Battle Room Clash is a scheduling tool for agencies that run live PK battles between their creators. You add your creators, find fair opponents by diamonds, league, and timezone, propose a time, and everyone gets notified and a calendar invite once it\u2019s confirmed. Think of it as matchmaking + a shared schedule for your whole roster.' },
       { q: 'How do I set up my agency?', a: 'Go to the Sign Up page, choose a plan, pick an admin code (your master password), enter your date of birth and contact email, and agree to the Terms. You\u2019ll get a 14-day free trial to try everything, and you can start inviting your streamers right away.' },
       { q: 'How do I add streamers to my roster?', a: 'Two ways. Send each streamer a single-use invite link from the \u201cInvite creators\u201d section of your dashboard \u2014 it works for one signup and expires after 24 hours (you can also bulk-generate a batch to onboard a whole roster at once). Or add someone directly yourself from the form on the dashboard. If you\u2019d rather let streamers join with one shared agency code instead of individual invites, an admin can turn that on in the same section.' },
       { q: 'How do I join my agency (as a streamer)?', a: 'Your agency sends you an invite link \u2014 just open it and it drops you on the signup screen with your code already filled in, so you set up a nickname and PIN and you\u2019re in. If your agency uses a shared code instead, tap \u201cStreamer Login\u201d and enter the code they gave you.' },
       { q: 'What\u2019s the difference between an admin code and a manager code?', a: 'An admin code has full access, including billing and removing creators. A manager code lets staff book battles and manage the roster, but can\u2019t touch billing, remove creators, reset other people\u2019s PINs, or change the admin code. Managers are optional — set one up from the admin panel if you want staff to help without giving them the keys to billing.' },
       { q: 'How long is the free trial?', a: '14 days. You\u2019ll get email reminders about 7 days and 1 day before it ends. After it ends, you keep view access to your existing roster and battles, but can\u2019t add new creators, book battles, or post until you subscribe.' },
-      { q: 'Is there an age requirement?', a: 'Yes — Battle Room is for adults only (18+). Agency owners and self-signing-up creators confirm their age with a date of birth when they create their account. If an admin adds a creator, that creator confirms their own age the first time they sign in, before they can use the account.' }
+      { q: 'Is there an age requirement?', a: 'Yes — Battle Room Clash is for adults only (18+). Agency owners and self-signing-up creators confirm their age with a date of birth when they create their account. If an admin adds a creator, that creator confirms their own age the first time they sign in, before they can use the account.' }
     ]
   },
   {
@@ -28,7 +28,7 @@ const CATEGORIES = [
   {
     name: 'Creators & Matching',
     faqs: [
-      { q: 'What are diamonds and league?', a: 'They\u2019re the two numbers Battle Room uses to find fair matchups. Diamonds represent a creator\u2019s recent live-gifting level (each creator enters their own 30-day figure), and league is their ranking tier. Matching two creators with similar diamonds and league makes for a more even battle.' },
+      { q: 'What are diamonds and league?', a: 'They\u2019re the two numbers Battle Room Clash uses to find fair matchups. Diamonds represent a creator\u2019s recent live-gifting level (each creator enters their own 30-day figure), and league is their ranking tier. Matching two creators with similar diamonds and league makes for a more even battle.' },
       { q: 'How is a \u201cbest match\u201d decided on Find Opponent?', a: 'It looks at how close another creator\u2019s diamonds and league are to yours, and prefers people in your own timezone (easier to schedule live). Favorites float to the top. You can also sort by diamonds, league, or name instead.' },
       { q: 'Who can see my diamonds and league?', a: 'Only people within your own agency. Other agencies on the platform never see your roster, battles, or posts — every agency is fully isolated.' },
       { q: 'What does \u201cActive recently\u201d mean on a creator card?', a: 'They logged in sometime in the last 7 days — a rough signal for who\u2019s actually using the platform right now.' },
@@ -70,7 +70,7 @@ const CATEGORIES = [
     faqs: [
       { q: 'Why aren\u2019t push notifications working on my iPhone?', a: 'iOS only allows push notifications for sites added to the Home Screen. Tap the Share icon in Safari, choose \u201cAdd to Home Screen,\u201d then reopen the app from there before enabling notifications.' },
       { q: 'Can I turn notifications off?', a: 'Yes, from the Profile tab — \u201cTurn off notifications.\u201d' },
-      { q: 'What devices and browsers work?', a: 'Battle Room runs in any modern browser on phone, tablet, or computer — no app store download needed. For the best experience on a phone (including push notifications on iPhone), add it to your Home Screen from your browser\u2019s Share menu.' }
+      { q: 'What devices and browsers work?', a: 'Battle Room Clash runs in any modern browser on phone, tablet, or computer — no app store download needed. For the best experience on a phone (including push notifications on iPhone), add it to your Home Screen from your browser\u2019s Share menu.' }
     ]
   }
 ];
@@ -86,7 +86,7 @@ export default function Help() {
 
   return (
     <div className="wrap">
-      <Head><title>Help · Battle Room</title></Head>
+      <Head><title>Help · Battle Room Clash</title></Head>
       <h1>Help &amp; FAQ</h1>
       <div className="field" style={{ maxWidth: 400 }}>
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search questions…" />

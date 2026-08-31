@@ -192,9 +192,9 @@ export default async function handler(req, res) {
     await sendEmail({
       to: contactEmail,
       subject: `Confirm your email for ${data.name}`,
-      html: `<p>Welcome to Battle Room! Please confirm this is your real contact email — it's what you'll use for billing codes, password resets, and invites.</p>
+      html: `<p>Welcome to Battle Room Clash! Please confirm this is your real contact email — it's what you'll use for billing codes, password resets, and invites.</p>
              <p><a href="${origin}/verify-email?token=${token}">Confirm my email</a></p>
-             <p>This link expires in 48 hours. If you didn't sign up for Battle Room, you can ignore this.</p>`
+             <p>This link expires in 48 hours. If you didn't sign up for Battle Room Clash, you can ignore this.</p>`
     });
   } catch (err) {
     await logError('agencies:verification-email', err);

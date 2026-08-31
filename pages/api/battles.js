@@ -85,14 +85,14 @@ export default async function handler(req, res) {
       const { data: proposer } = await supabaseAdmin.from('creators').select('name').eq('id', proposerId).single();
       await notifyCreator(invitee, {
         title: 'New battle invite',
-        body: `${proposer ? proposer.name : 'Someone'} wants to battle you. Open Battle Room to respond.`,
+        body: `${proposer ? proposer.name : 'Someone'} wants to battle you. Open Battle Room Clash to respond.`,
         url: '/app'
       });
     } else {
       // Admin-booked battle — neither side proposed it, so notify both.
       await Promise.all([creatorA, creatorB].map((id) => notifyCreator(id, {
         title: 'A battle was scheduled for you',
-        body: 'Your agency booked a battle for you — open Battle Room to confirm.',
+        body: 'Your agency booked a battle for you — open Battle Room Clash to confirm.',
         url: '/app'
       })));
     }

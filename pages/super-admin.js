@@ -154,7 +154,7 @@ export default function SuperAdmin() {
     if (needs2fa) {
       return (
         <div className="wrap">
-          <Head><title>Super Admin · Battle Room</title></Head>
+          <Head><title>Super Admin · Battle Room Clash</title></Head>
           <form className="card" style={{ maxWidth: 360, margin: '60px auto' }} onSubmit={submit2fa}>
             <h2>Two-Factor Code</h2>
             <p className="dim">Enter the 6-digit code from your authenticator app.</p>
@@ -273,7 +273,7 @@ export default function SuperAdmin() {
         const price = tier.monthly ? `$${a.billing_period === 'yearly' ? tier.yearly : tier.monthly}/${a.billing_period === 'yearly' ? 'yr' : 'mo'}` : 'Custom';
         return (
           <div key={a.id} className="card">
-            <Head><title>Super Admin · Battle Room</title></Head>
+            <Head><title>Super Admin · Battle Room Clash</title></Head>
             <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
               <div>
                 <b>{a.name}</b> <span className="dim">({a.agency_code})</span>

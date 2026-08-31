@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Business Advisor — Questions to Ask</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    color: #1a1a1a; line-height: 1.35; padding: 28px 34px; max-width: 900px; margin: 0 auto;
+    font-size: 12.5px;
+  }
+  h1 { font-size: 21px; margin-bottom: 2px; letter-spacing: -0.3px; }
+  .sub { color: #666; font-size: 11.5px; margin-bottom: 14px; }
+  .lead {
+    background: #fff8e1; border: 1px solid #f0d97a; border-radius: 8px;
+    padding: 9px 12px; margin-bottom: 16px; font-size: 11.5px;
+  }
+  .lead b { color: #8a6d00; }
+  .cols { column-count: 2; column-gap: 26px; }
+  section { break-inside: avoid; margin-bottom: 13px; }
+  h2 {
+    font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.5px;
+    color: #b8860b; border-bottom: 1.5px solid #eee; padding-bottom: 3px; margin-bottom: 6px;
+  }
+  ul { list-style: none; }
+  li { position: relative; padding-left: 20px; margin-bottom: 5px; font-size: 11.5px; }
+  li::before {
+    content: ""; position: absolute; left: 0; top: 1px;
+    width: 11px; height: 11px; border: 1.5px solid #bbb; border-radius: 3px;
+  }
+  .hot { color: #c0392b; font-weight: 600; }
+  .foot {
+    margin-top: 8px; border-top: 1.5px solid #eee; padding-top: 8px;
+    font-size: 11px; color: #444;
+  }
+  .foot b { color: #1a1a1a; }
+  @media print {
+    body { padding: 14px 20px; font-size: 11px; }
+    .lead { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    h2 { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+  <h1>Questions for the Business Advisor</h1>
+  <div class="sub">Battle Room · solo founder · Idaho LLC · B2B software subscription (SaaS)</div>
+
+  <div class="lead">
+    <b>Lead with these three</b> — most likely to bite you and hardest to fix later:
+    &nbsp;1) Sales tax on SaaS (Idaho + other states) &nbsp;·&nbsp; 2) Quarterly estimated taxes &nbsp;·&nbsp; 3) Keeping the LLC liability shield intact.
+    <br>Then ask: <b>"If I could only do three things before launch, what would they be?"</b>
+  </div>
+
+  <div class="cols">
+    <section>
+      <h2>Entity &amp; Formation</h2>
+      <ul>
+        <li>Single-member LLC now vs. S-corp election later — at what revenue does S-corp start to save me money?</li>
+        <li>Do I need a registered agent — me or a service?</li>
+        <li>Idaho filings, fees &amp; annual report requirements to stay in good standing?</li>
+        <li>Do I need a state or Canyon County / city business license to run a SaaS?</li>
+        <li>Should I get an EIN even as single-member? (Why / why not.)</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Banking &amp; Liability Shield</h2>
+      <ul>
+        <li>What do I need to open a business bank account?</li>
+        <li class="hot">What specifically puts my personal assets at risk ("piercing the veil") — and how do I avoid it?</li>
+        <li>How should I pay myself — owner's draw vs. salary?</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Taxes <span class="hot">(priority)</span></h2>
+      <ul>
+        <li>How is a single-member LLC taxed — what will I owe (federal, Idaho, self-employment)?</li>
+        <li class="hot">Do I owe quarterly estimated taxes, and how do I calculate them?</li>
+        <li class="hot">Sales tax on my subscription — taxable in Idaho? What about out-of-state customers ("economic nexus")?</li>
+        <li>What expenses can I deduct (hosting, software, insurance, home office, legal)?</li>
+        <li>Accounting software from day one — which?</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Contracts &amp; Legal</h2>
+      <ul>
+        <li>Should a lawyer review my Terms of Service &amp; Privacy Policy before real customers — rough cost?</li>
+        <li>I collect user data + process payments (Stripe) — what privacy/data obligations am I missing (CA + other states)?</li>
+        <li>My subscriptions auto-renew — what auto-renewal disclosure laws must I follow?</li>
+        <li>Is click-to-agree on my Terms enough, or do customers need to sign something?</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Insurance &amp; Risk</h2>
+      <ul>
+        <li>What insurance does a SaaS actually need — Tech E&amp;O, Cyber liability? Realistic cost?</li>
+        <li>Get it before my first paying customer, or at some threshold?</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Payments &amp; Records</h2>
+      <ul>
+        <li>Stripe specifics — tax reporting (1099-K), chargebacks, refund handling?</li>
+        <li>What records must I keep, and for how long?</li>
+      </ul>
+    </section>
+  </div>
+
+  <div class="foot">
+    <b>Always ask:</b> "For a solo founder launching a B2B software subscription in Idaho, what do people in my position most commonly get wrong or forget?"
+    &nbsp;&nbsp;|&nbsp;&nbsp; <b>Notes:</b> jot their answers next to each box — flag anything that surprises you to follow up on.
+  </div>
+</body>
+</html>

@@ -61,7 +61,7 @@ export default async function handler(req, res) {
       const { data: actor } = await supabaseAdmin.from('creators').select('name').eq('id', actorId).single();
       await notifyCreator(other, {
         title: 'New time proposed',
-        body: `${actor ? actor.name : 'Someone'} couldn't make the original time and proposed a new one. Open Battle Room to respond.`,
+        body: `${actor ? actor.name : 'Someone'} couldn't make the original time and proposed a new one. Open Battle Room Clash to respond.`,
         url: '/app'
       });
 
@@ -117,7 +117,7 @@ export default async function handler(req, res) {
       }
       await Promise.all(recipients.filter(Boolean).map((rid) => notifyCreator(rid, {
         title: 'Battle cancelled',
-        body: `${actorName} cancelled a scheduled battle. Open Battle Room for details.`,
+        body: `${actorName} cancelled a scheduled battle. Open Battle Room Clash for details.`,
         url: '/app'
       })));
     }

@@ -21,7 +21,7 @@ export default function Status() {
 
   return (
     <div className="wrap">
-      <Head><title>Status · Battle Room</title></Head>
+      <Head><title>Status · Battle Room Clash</title></Head>
       <h1>System Status</h1>
       <div className="card" style={{ borderColor: health?.ok ? 'var(--green)' : health ? 'var(--pink)' : 'var(--line)' }}>
         {checking && !health ? (

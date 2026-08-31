@@ -1,12 +1,12 @@
 import Head from 'next/head';
 // Terms of Service — structure adapted from the 37signals open-source
 // policies (https://37signals.com/policies), used under CC BY 4.0, and
-// modified to match how Battle Room actually works and to sit under
+// modified to match how Battle Room Clash actually works and to sit under
 // Idaho law. Have an attorney review before relying on this at launch.
 export default function TOS() {
   return (
     <div className="wrap">
-      <Head><title>Terms of Service · Battle Room</title></Head>
+      <Head><title>Terms of Service · Battle Room Clash</title></Head>
       <div className="card">
         <h1>Terms of Service</h1>
         <p className="dim" style={{ marginBottom: 16 }}>Last updated: August 20, 2026</p>
@@ -24,10 +24,9 @@ export default function TOS() {
 
         <h3>Definitions</h3>
         <p>&quot;Company&quot;, &quot;we&quot;, &quot;our&quot;, or
-        &quot;us&quot; refers to the operator of Battle Room, based in the
-        State of Idaho. If a legal entity is formed to operate Battle Room,
-        these Terms apply to that entity as the operator.</p>
-        <p>&quot;Service&quot; refers to the Battle Room website and
+        &quot;us&quot; refers to Battle Room Clash LLC, an Idaho limited
+        liability company, which operates Battle Room Clash.</p>
+        <p>&quot;Service&quot; refers to the Battle Room Clash website and
         application — including the agency admin panel, the creator app, and
         any related pages we operate — used for scheduling and coordinating
         live battles between creators within an agency.</p>
@@ -36,7 +35,7 @@ export default function TOS() {
         to team members and creators using the Service under that agency.</p>
 
         <h3>Eligibility — Adults Only</h3>
-        <p>Battle Room is for adults. Every user — agency owners, team
+        <p>Battle Room Clash is for adults. Every user — agency owners, team
         members, and creators — must be at least 18 years old. Signup and
         creator onboarding require an explicit age attestation, and agencies
         must not add creators they know or should know are under 18. If we
@@ -128,7 +127,7 @@ export default function TOS() {
         first, but we are not required to.</p>
 
         <h3>Acceptable use</h3>
-        <p>You agree to use Battle Room only for organizing and coordinating
+        <p>You agree to use Battle Room Clash only for organizing and coordinating
         live battles and managing your own agency&apos;s roster. You
         must not use the Service to harass anyone, post unlawful or abusive
         content, attempt to compromise the platform or other users&apos;
@@ -201,8 +200,8 @@ export default function TOS() {
         Service.</p>
 
         <p className="dim" style={{ marginTop: 24 }}>Questions about these
-        Terms? Email <a href="mailto:support@battle-room.app"
-        style={{ color: 'var(--cyan)' }}>support@battle-room.app</a>.</p>
+        Terms? Email <a href="mailto:battleroomadmin@gmail.com"
+        style={{ color: 'var(--cyan)' }}>battleroomadmin@gmail.com</a>.</p>
         <p className="dim" style={{ fontSize: 12, marginTop: 8 }}>Portions of
         these Terms are adapted from the 37signals open-source policies,
         used under CC BY 4.0.</p>

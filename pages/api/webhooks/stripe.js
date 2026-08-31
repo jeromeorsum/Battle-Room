@@ -112,12 +112,12 @@ export default async function handler(req, res) {
               : 'soon';
             await sendEmail({
               to: agency.contact_email,
-              subject: `Your Battle Room free trial ends soon — ${amount}/month starts ${chargeDate}`,
+              subject: `Your Battle Room Clash free trial ends soon — ${amount}/month starts ${chargeDate}`,
               html: `<p>Hi ${agency.name},</p>
-                     <p>Your 14-day Battle Room free trial is ending. Unless you cancel first, your ${tier?.label || ''} subscription will begin and your card will be charged <b>${amount}</b> on <b>${chargeDate}</b>, then ${amount} each month until you cancel.</p>
-                     <p>If you'd like to keep Battle Room, you don't need to do anything — it'll continue automatically.</p>
+                     <p>Your 14-day Battle Room Clash free trial is ending. Unless you cancel first, your ${tier?.label || ''} subscription will begin and your card will be charged <b>${amount}</b> on <b>${chargeDate}</b>, then ${amount} each month until you cancel.</p>
+                     <p>If you'd like to keep Battle Room Clash, you don't need to do anything — it'll continue automatically.</p>
                      <p>If you'd rather not be charged, you can cancel for free anytime before ${chargeDate} in your admin billing settings, or by replying to this email and asking us to cancel. Either way, cancelling during the trial means no charge.</p>
-                     <p>Thanks for trying Battle Room.</p>`
+                     <p>Thanks for trying Battle Room Clash.</p>`
             });
             await logAudit(agency.id, 'System', 'Trial-ending reminder sent', `Charge of ${amount} scheduled for ${chargeDate}`);
           }
@@ -166,9 +166,9 @@ export default async function handler(req, res) {
               const origin = process.env.NEXT_PUBLIC_SITE_URL || 'https://battle-room.vercel.app';
               await sendEmail({
                 to: agency.contact_email,
-                subject: 'Action needed: your Battle Room payment didn\u2019t go through',
+                subject: 'Action needed: your Battle Room Clash payment didn\u2019t go through',
                 html: `<p>Hi ${agency.name},</p>
-                       <p>We tried to charge your card for your Battle Room subscription, but the payment didn\u2019t go through. Your account is now limited until it\u2019s resolved.</p>
+                       <p>We tried to charge your card for your Battle Room Clash subscription, but the payment didn\u2019t go through. Your account is now limited until it\u2019s resolved.</p>
                        <p>To fix it, update your payment method in your admin billing settings and we\u2019ll retry the charge:</p>
                        <p><a href="${origin}/admin">Open billing settings</a></p>
                        <p>If you think this is a mistake, just reply to this email and we\u2019ll help.</p>`

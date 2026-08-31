@@ -1,5 +1,5 @@
 self.addEventListener('push', (event) => {
-  let data = { title: 'Battle Room', body: 'You have an update.', url: '/' };
+  let data = { title: 'Battle Room Clash', body: 'You have an update.', url: '/' };
   try { data = event.data.json(); } catch (e) { /* fall back to default */ }
 
   event.waitUntil(

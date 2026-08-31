@@ -24,7 +24,7 @@ export default function Changelog() {
   return (
     <div className="wrap">
       <h1>What's New</h1>
-      <p className="dim">A running log of updates to Battle Room.</p>
+      <p className="dim">A running log of updates to Battle Room Clash.</p>
       {CHANGES.map((entry) => (
         <div key={entry.date} className="card">
           <h2 style={{ fontSize: 16 }}>{new Date(entry.date + 'T12:00:00').toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</h2>

@@ -47,7 +47,7 @@ export default async function handler(req, res) {
       if (daysLeft <= 7 && daysLeft > 1 && !agency.trial_reminder_7_sent) {
         await sendEmail({
           to: agency.contact_email,
-          subject: `Your Battle Room trial ends in ${daysLeft} days`,
+          subject: `Your Battle Room Clash trial ends in ${daysLeft} days`,
           html: `<p>Hi ${agency.name},</p><p>Your free trial ends in ${daysLeft} days. Subscribe any time from the Settings tab in your admin panel to keep full access.</p>`
         });
         await supabaseAdmin.from('agencies').update({ trial_reminder_7_sent: true }).eq('id', agency.id);
@@ -55,7 +55,7 @@ export default async function handler(req, res) {
       } else if (daysLeft <= 1 && !agency.trial_reminder_1_sent) {
         await sendEmail({
           to: agency.contact_email,
-          subject: 'Your Battle Room trial ends tomorrow',
+          subject: 'Your Battle Room Clash trial ends tomorrow',
           html: `<p>Hi ${agency.name},</p><p>Your free trial ends tomorrow. After that, you'll still be able to view your roster and battles, but won't be able to add new creators, book battles, or post until you subscribe.</p>`
         });
         await supabaseAdmin.from('agencies').update({ trial_reminder_1_sent: true }).eq('id', agency.id);

@@ -55,7 +55,7 @@ export default function InstallPrompt() {
   return (
     <div className="card" style={{ borderColor: 'var(--cyan)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
       <div>
-        <b>📲 Install Battle Room</b>
+        <b>📲 Install Battle Room Clash</b>
         <p className="dim" style={{ margin: '4px 0 0' }}>
           {showIOSInstructions
             ? 'Tap the Share icon in Safari, then "Add to Home Screen." This also unlocks push notifications on iPhone.'

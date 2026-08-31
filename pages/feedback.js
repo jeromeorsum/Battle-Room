@@ -20,7 +20,7 @@ export default function Feedback() {
   if (sent) {
     return (
       <div className="wrap">
-        <Head><title>Feedback · Battle Room</title></Head>
+        <Head><title>Feedback · Battle Room Clash</title></Head>
         <div className="card" style={{ maxWidth: 480, margin: '60px auto' }}>
           <h2>Thanks! 🙏</h2>
           <p className="dim">Your feedback was sent. If you're reporting a bug, that context — what you were logged in as, what you clicked — is genuinely helpful, so feel free to send a follow-up with more detail.</p>
@@ -31,7 +31,7 @@ export default function Feedback() {
 
   return (
     <div className="wrap">
-      <Head><title>Feedback · Battle Room</title></Head>
+      <Head><title>Feedback · Battle Room Clash</title></Head>
       <h1>Send Feedback</h1>
       <form className="card" onSubmit={submit}>
         <p className="dim" style={{ marginTop: 0 }}>Found a bug or have an idea? Tell us here — it goes straight to the team. If you&apos;re reporting a bug, a quick note on what you were doing when it happened helps a lot.</p>

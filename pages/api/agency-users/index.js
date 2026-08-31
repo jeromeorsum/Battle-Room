@@ -35,8 +35,8 @@ export default async function handler(req, res) {
       const origin = req.headers.origin || `https://${req.headers.host}`;
       await sendEmail({
         to: normalizedEmail,
-        subject: `You've been invited to ${agency?.name || 'a Battle Room agency'}`,
-        html: `<p>You've been invited to join <b>${agency?.name || 'a Battle Room agency'}</b> as a${role === 'admin' ? 'n' : ''} <b>${role}</b>.</p>
+        subject: `You've been invited to ${agency?.name || 'a Battle Room Clash agency'}`,
+        html: `<p>You've been invited to join <b>${agency?.name || 'a Battle Room Clash agency'}</b> as a${role === 'admin' ? 'n' : ''} <b>${role}</b>.</p>
                <p><a href="${origin}/accept-invite?token=${token}">Accept the invite and set your password</a></p>
                <p>This link expires in 72 hours. If you weren't expecting this, you can ignore it.</p>`
       });

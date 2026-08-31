@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   const session = readSession(req, COOKIES.SUPERADMIN);
   if (!session) return res.status(401).json({ error: 'Log in first.' });
 
-  const { secret, qrDataUrl } = await generateTotpSetup('Super Admin — Battle Room');
+  const { secret, qrDataUrl } = await generateTotpSetup('Super Admin — Battle Room Clash');
   await supabaseAdmin.from('super_admin_2fa').update({ totp_secret: secret, totp_enabled: false, updated_at: new Date().toISOString() }).eq('id', 'singleton');
 
   return res.status(200).json({ qrDataUrl });

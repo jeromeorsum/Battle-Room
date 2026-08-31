@@ -12,7 +12,7 @@ export default function Landing() {
   return (
     <div className="wrap">
       <header style={{ textAlign: 'center', margin: '40px 0' }}>
-        <h1 style={{ fontSize: 44 }}>BATTLE ROOM</h1>
+        <h1 style={{ fontSize: 44 }}>BATTLE ROOM CLASH</h1>
         <p className="dim" style={{ fontSize: 16 }}>Schedule live PK battles across your whole agency — matched by diamonds, league, and timezone.</p>
         <div className="row" style={{ justifyContent: 'center', marginTop: 16 }}>
           <a href="/signup" className="btn" style={{ textDecoration: 'none' }}>Start your agency's trial</a>
@@ -38,7 +38,7 @@ export default function Landing() {
       <div className="card">
         <h2 style={{ textAlign: 'center' }}>How it works</h2>
         <p className="dim" style={{ textAlign: 'center', maxWidth: 620, margin: '0 auto 8px' }}>
-          Coordinating battles across a big roster usually turns into a mess of DMs, screenshots, and missed times. Battle Room keeps every match, time, and reminder in one organized place.
+          Coordinating battles across a big roster usually turns into a mess of DMs, screenshots, and missed times. Battle Room Clash keeps every match, time, and reminder in one organized place.
         </p>
         <div className="how-grid">
           <div className="how-step">
@@ -113,7 +113,7 @@ export default function Landing() {
                   {t.monthly && t.maxCreators ? `As low as $${(( (billingPeriod === 'yearly' ? t.yearly / 12 : t.monthly) ) / t.maxCreators).toFixed(2)}/creator` : 'Volume pricing available'}
                 </div>
                 <p className="dim" style={{ flexGrow: 1 }}>{t.blurb}</p>
-                <a href={t.monthly ? '/signup' : 'mailto:support@battle-room.app?subject=Battle%20Room%20Enterprise'} className={t.popular ? 'btn' : 'btn ghost'} style={{ display: 'block', textAlign: 'center', textDecoration: 'none', marginTop: 8 }}>
+                <a href={t.monthly ? '/signup' : 'mailto:battleroomadmin@gmail.com?subject=Battle%20Room%20Clash%20Enterprise'} className={t.popular ? 'btn' : 'btn ghost'} style={{ display: 'block', textAlign: 'center', textDecoration: 'none', marginTop: 8 }}>
                   {t.monthly ? 'Start free trial' : 'Contact us'}
                 </a>
               </div>

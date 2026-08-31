@@ -32,8 +32,8 @@ export default async function handler(req, res) {
     const origin = req.headers.origin || `https://${req.headers.host}`;
     await sendEmail({
       to: user.email,
-      subject: 'Reset your Battle Room password',
-      html: `<p>Someone requested a password reset for your Battle Room account.</p>
+      subject: 'Reset your Battle Room Clash password',
+      html: `<p>Someone requested a password reset for your Battle Room Clash account.</p>
              <p><a href="${origin}/reset-password?token=${token}">Reset your password</a></p>
              <p>This link expires in 1 hour. If you didn't request this, you can ignore it — your password won't change.</p>`
     });

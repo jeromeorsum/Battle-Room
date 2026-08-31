@@ -2,7 +2,7 @@ import Head from 'next/head';
 export default function Privacy() {
   return (
     <div className="wrap">
-      <Head><title>Privacy Policy · Battle Room</title></Head>
+      <Head><title>Privacy Policy · Battle Room Clash</title></Head>
       <div className="card">
         <h1>Privacy Policy</h1>
         <p className="dim">Last updated: August 20, 2026.</p>

@@ -40,8 +40,8 @@ export default async function handler(req, res) {
   try {
     await sendEmail({
       to: contactEmail,
-      subject: 'Reset your Battle Room admin code',
-      html: `<p>Someone requested an admin code reset for your Battle Room agency.</p>
+      subject: 'Reset your Battle Room Clash admin code',
+      html: `<p>Someone requested an admin code reset for your Battle Room Clash agency.</p>
              <p><a href="${resetUrl}">Click here to set a new admin code</a> — this link expires in 30 minutes.</p>
              <p>If you didn't request this, you can safely ignore this email.</p>`
     });

@@ -536,9 +536,9 @@ export default function Admin() {
   }
 
   async function shareReferralLink() {
-    const text = `Join Battle Room using my referral code ${agency.referral_code}: ${referralLink}`;
+    const text = `Join Battle Room Clash using my referral code ${agency.referral_code}: ${referralLink}`;
     if (navigator.share) {
-      try { await navigator.share({ title: 'Battle Room', text, url: referralLink }); return; }
+      try { await navigator.share({ title: 'Battle Room Clash', text, url: referralLink }); return; }
       catch (e) { /* user cancelled the share sheet — fall through to copy */ }
     }
     navigator.clipboard.writeText(text);
@@ -563,7 +563,7 @@ export default function Admin() {
     if (needs2fa) {
       return (
         <div className="wrap">
-          <Head><title>Admin · Battle Room</title></Head>
+          <Head><title>Admin · Battle Room Clash</title></Head>
           <form className="card" style={{ maxWidth: 380, margin: '60px auto' }} onSubmit={submit2fa}>
             <h2>Two-Factor Code</h2>
             <p className="dim">Enter the 6-digit code from your authenticator app.</p>
@@ -659,7 +659,7 @@ export default function Admin() {
 
   return (
     <div className="wrap" style={accentColor ? { '--gold': accentColor } : undefined}>
-      <Head><title>Admin · Battle Room</title></Head>
+      <Head><title>Admin · Battle Room Clash</title></Head>
       <header className="app-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
         <div>
           <h1>Admin</h1>
@@ -750,7 +750,7 @@ export default function Admin() {
           {showOnboarding && (creators.length === 0 || battles.length === 0) && (
             <div className="card" style={{ borderColor: 'var(--gold)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <h2>👋 Welcome to Battle Room</h2>
+                <h2>👋 Welcome to Battle Room Clash</h2>
                 <button className="btn ghost" style={{ fontSize: 11, padding: '4px 10px' }} onClick={() => setShowOnboarding(false)}>Dismiss</button>
               </div>
               <p className="dim" style={{ marginTop: 0 }}>Let&apos;s get your agency up and running. Here are your first steps:</p>
