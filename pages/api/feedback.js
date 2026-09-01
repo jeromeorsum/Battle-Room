@@ -12,9 +12,19 @@ export default async function handler(req, res) {
 
   const creatorSession = readSession(req, COOKIES.CREATOR);
   const adminSession = readSession(req, COOKIES.ADMIN);
-  const agencyId = creatorSession?.agencyId || adminSession?.agencyId || null;
+  const sessionAgencyId = creatorSession?.agencyId || adminSession?.agencyId || null;
   const submittedBy = creatorSession ? 'Creator' : adminSession ? `Agency ${adminSession.role}` : 'Anonymous';
   const clean = message.trim();
+
+  // Resolve the agency once, and only keep the id if the agency still exists.
+  // If the session points at a deleted agency, we save the feedback with no
+  // agency rather than 500 on the foreign key — feedback should never be lost.
+  let agencyId = null;
+  let agencyName = 'None (not signed in)';
+  if (sessionAgencyId) {
+    const { data: ag } = await supabaseAdmin.from('agencies').select('id, name').eq('id', sessionAgencyId).single();
+    if (ag) { agencyId = ag.id; agencyName = ag.name; }
+  }
 
   const { error } = await supabaseAdmin.from('feedback_submissions').insert({
     agency_id: agencyId, submitted_by: submittedBy, message: clean
@@ -26,11 +36,6 @@ export default async function handler(req, res) {
   try {
     const alertEmail = process.env.ADMIN_ALERT_EMAIL;
     if (alertEmail) {
-      let agencyName = 'None (not signed in)';
-      if (agencyId) {
-        const { data: ag } = await supabaseAdmin.from('agencies').select('name').eq('id', agencyId).single();
-        if (ag?.name) agencyName = ag.name;
-      }
       const escaped = clean.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       await sendEmail({
         to: alertEmail,
