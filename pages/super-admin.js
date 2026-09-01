@@ -16,8 +16,9 @@ export default function SuperAdmin() {
   const [rosterCreators, setRosterCreators] = useState([]);
   const [rosterSearch, setRosterSearch] = useState('');
   const [rosterLoading, setRosterLoading] = useState(false);
-  const [superTab, setSuperTab] = useState('agencies'); // agencies | new-info | security
+  const [superTab, setSuperTab] = useState('agencies'); // agencies | new-info | feedback | security
   const [newInfo, setNewInfo] = useState({ agencies: [], creators: [] });
+  const [feedback, setFeedback] = useState(null);
   const [newInfoLoading, setNewInfoLoading] = useState(false);
 
   const [needs2fa, setNeeds2fa] = useState(false);
@@ -38,6 +39,12 @@ export default function SuperAdmin() {
     const res = await fetch('/api/super-admin/new-info');
     if (res.ok) setNewInfo(await res.json());
     setNewInfoLoading(false);
+  }
+
+  async function loadFeedback() {
+    const res = await fetch('/api/super-admin/feedback');
+    if (res.ok) { const d = await res.json(); setFeedback(d.feedback || []); }
+    else setFeedback([]);
   }
 
   async function toggleRoster(agencyId) {
@@ -195,6 +202,7 @@ export default function SuperAdmin() {
       <div className="tabs">
         <button className={superTab === 'agencies' ? 'active' : ''} onClick={() => setSuperTab('agencies')}>Agencies</button>
         <button className={superTab === 'new-info' ? 'active' : ''} onClick={() => { setSuperTab('new-info'); if (newInfo.agencies.length === 0) loadNewInfo(); }}>New Info</button>
+        <button className={superTab === 'feedback' ? 'active' : ''} onClick={() => { setSuperTab('feedback'); if (feedback === null) loadFeedback(); }}>Feedback</button>
         <button className={superTab === 'security' ? 'active' : ''} onClick={() => { setSuperTab('security'); load2faStatus(); }}>Security</button>
       </div>
 
@@ -257,6 +265,27 @@ export default function SuperAdmin() {
                 ))}
               </div>
             </>
+          )}
+        </div>
+      )}
+
+      {superTab === 'feedback' && (
+        <div>
+          <p className="dim">Feedback submitted from the Send Feedback page — newest first. You also get an email for each new submission (if your alert email is set).</p>
+          {feedback === null ? <SkeletonList count={3} /> : feedback.length === 0 ? (
+            <div className="card"><p className="dim">No feedback yet.</p></div>
+          ) : (
+            <div className="card">
+              {feedback.map((f) => (
+                <div key={f.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <span className="badge">{f.submittedBy}</span>
+                    <span className="dim" style={{ fontSize: 12 }}>{f.agency} · {new Date(f.createdAt).toLocaleString()}</span>
+                  </div>
+                  <p style={{ margin: '8px 0 0', whiteSpace: 'pre-wrap' }}>{f.message}</p>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
