@@ -7,4 +7,4 @@ Disallow: /reset-admin-code
 Disallow: /reset-password
 Disallow: /accept-invite
 
-Sitemap: https://battle-room.vercel.app/sitemap.xml
+Sitemap: https://www.battleroomclash.com/sitemap.xml

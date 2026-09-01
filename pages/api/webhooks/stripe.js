@@ -163,7 +163,7 @@ export default async function handler(req, res) {
             const { data: agency } = await supabaseAdmin
               .from('agencies').select('id, name, contact_email').eq('stripe_subscription_id', invoice.subscription).single();
             if (agency?.contact_email) {
-              const origin = process.env.NEXT_PUBLIC_SITE_URL || 'https://battle-room.vercel.app';
+              const origin = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.battleroomclash.com';
               await sendEmail({
                 to: agency.contact_email,
                 subject: 'Action needed: your Battle Room Clash payment didn\u2019t go through',

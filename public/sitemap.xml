@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://battle-room.vercel.app/</loc><priority>1.0</priority></url>
-  <url><loc>https://battle-room.vercel.app/signup</loc><priority>0.9</priority></url>
-  <url><loc>https://battle-room.vercel.app/help</loc><priority>0.5</priority></url>
-  <url><loc>https://battle-room.vercel.app/changelog</loc><priority>0.3</priority></url>
-  <url><loc>https://battle-room.vercel.app/feedback</loc><priority>0.3</priority></url>
-  <url><loc>https://battle-room.vercel.app/status</loc><priority>0.3</priority></url>
-  <url><loc>https://battle-room.vercel.app/tos</loc><priority>0.2</priority></url>
-  <url><loc>https://battle-room.vercel.app/privacy</loc><priority>0.2</priority></url>
+  <url><loc>https://www.battleroomclash.com/</loc><priority>1.0</priority></url>
+  <url><loc>https://www.battleroomclash.com/signup</loc><priority>0.9</priority></url>
+  <url><loc>https://www.battleroomclash.com/help</loc><priority>0.5</priority></url>
+  <url><loc>https://www.battleroomclash.com/changelog</loc><priority>0.3</priority></url>
+  <url><loc>https://www.battleroomclash.com/feedback</loc><priority>0.3</priority></url>
+  <url><loc>https://www.battleroomclash.com/status</loc><priority>0.3</priority></url>
+  <url><loc>https://www.battleroomclash.com/tos</loc><priority>0.2</priority></url>
+  <url><loc>https://www.battleroomclash.com/privacy</loc><priority>0.2</priority></url>
 </urlset>
