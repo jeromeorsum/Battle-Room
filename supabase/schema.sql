@@ -259,3 +259,8 @@ create index if not exists idx_creator_invites_agency on creator_invites (agency
 -- joining. Off by default (invite-only); existing agencies grandfathered to true.
 -- Only an admin (not a manager) can change it.
 alter table agencies add column if not exists allow_shared_code boolean default false;
+
+
+-- read_at timestamp column for feedback read/unread state; nullable.
+-- Set when the owner first opens a message in the super-admin Feedback tab.
+alter table feedback_submissions add column if not exists read_at timestamptz;
