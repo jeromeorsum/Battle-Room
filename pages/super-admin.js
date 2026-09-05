@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { PRICING_TIERS, tierById } from '../lib/pricing';
 import PasswordField from '../components/PasswordField';
 import { SkeletonList } from '../components/Skeleton';
-import { toast } from '../components/Notify';
+import { toast, confirmModal } from '../components/Notify';
 
 export default function SuperAdmin() {
   const [code, setCode] = useState('');
@@ -19,6 +19,7 @@ export default function SuperAdmin() {
   const [superTab, setSuperTab] = useState('agencies'); // agencies | new-info | feedback | security
   const [newInfo, setNewInfo] = useState({ agencies: [], creators: [] });
   const [feedback, setFeedback] = useState(null);
+  const [expandedFeedback, setExpandedFeedback] = useState({}); // id -> true while open
   const [newInfoLoading, setNewInfoLoading] = useState(false);
 
   const [needs2fa, setNeeds2fa] = useState(false);
@@ -45,6 +46,50 @@ export default function SuperAdmin() {
     const res = await fetch('/api/super-admin/feedback');
     if (res.ok) { const d = await res.json(); setFeedback(d.feedback || []); }
     else setFeedback([]);
+  }
+
+  function toggleFeedback(f) {
+    const isOpen = !!expandedFeedback[f.id];
+    setExpandedFeedback((prev) => ({ ...prev, [f.id]: !isOpen }));
+    if (!isOpen && !f.readAt) {
+      // Opening an unread message marks it read (kept read even if the
+      // request fails — it'll re-sync on the next load).
+      const readAt = new Date().toISOString();
+      setFeedback((prev) => (prev || []).map((x) => (x.id === f.id ? { ...x, readAt } : x)));
+      fetch('/api/super-admin/feedback', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: f.id })
+      }).catch(() => {});
+    }
+  }
+
+  async function deleteFeedback(f) {
+    const ok = await confirmModal('Delete this feedback message? This can’t be undone.');
+    if (!ok) return;
+    const res = await fetch('/api/super-admin/feedback', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: f.id })
+    });
+    if (res.ok) { setFeedback((prev) => (prev || []).filter((x) => x.id !== f.id)); toast('Feedback deleted.'); }
+    else toast('Could not delete that message.', 'error');
+  }
+
+  async function deleteReadFeedback() {
+    const readCount = (feedback || []).filter((x) => x.readAt).length;
+    const ok = await confirmModal(`Delete all ${readCount} read message${readCount === 1 ? '' : 's'}? This can’t be undone.`);
+    if (!ok) return;
+    const res = await fetch('/api/super-admin/feedback', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ readOnly: true })
+    });
+    if (res.ok) {
+      const d = await res.json();
+      setFeedback((prev) => (prev || []).filter((x) => !x.readAt));
+      toast(`Deleted ${d.deleted} read message${d.deleted === 1 ? '' : 's'}.`);
+    } else toast('Could not delete read messages.', 'error');
   }
 
   async function toggleRoster(agencyId) {
@@ -271,20 +316,62 @@ export default function SuperAdmin() {
 
       {superTab === 'feedback' && (
         <div>
-          <p className="dim">Feedback submitted from the Send Feedback page — newest first. You also get an email for each new submission (if your alert email is set).</p>
+          <p className="dim">Feedback submitted from the Send Feedback page — newest first. Click a message to read it. You also get an email for each new submission (if your alert email is set).</p>
           {feedback === null ? <SkeletonList count={3} /> : feedback.length === 0 ? (
             <div className="card"><p className="dim">No feedback yet.</p></div>
           ) : (
             <div className="card">
-              {feedback.map((f) => (
-                <div key={f.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                    <span className="badge">{f.submittedBy}</span>
-                    <span className="dim" style={{ fontSize: 12 }}>{f.agency} · {new Date(f.createdAt).toLocaleString()}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', paddingBottom: 10, borderBottom: '1px solid var(--line)' }}>
+                <span className="dim" style={{ fontSize: 13 }}>
+                  {feedback.filter((x) => !x.readAt).length > 0
+                    ? <><b style={{ color: 'var(--gold)' }}>{feedback.filter((x) => !x.readAt).length} unread</b> · {feedback.length} total</>
+                    : <>All read · {feedback.length} total</>}
+                </span>
+                <button
+                  className="btn ghost"
+                  style={{ fontSize: 12, color: 'var(--pink)', borderColor: 'var(--pink)' }}
+                  disabled={!feedback.some((x) => x.readAt)}
+                  onClick={deleteReadFeedback}
+                >Delete All Read</button>
+              </div>
+              {feedback.map((f) => {
+                const open = !!expandedFeedback[f.id];
+                const unread = !f.readAt;
+                return (
+                  <div key={f.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line)' }}>
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => toggleFeedback(f)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleFeedback(f); } }}
+                      style={{ cursor: 'pointer' }}
+                      aria-expanded={open}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          {unread && <span aria-label="Unread" title="Unread" style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--gold)', flexShrink: 0 }} />}
+                          <span className="badge">{f.submittedBy}</span>
+                          {!unread && <span className="dim" style={{ fontSize: 11 }}>Read</span>}
+                        </span>
+                        <span className="dim" style={{ fontSize: 12 }}>{f.agency} · {new Date(f.createdAt).toLocaleString()}</span>
+                      </div>
+                      <p style={open
+                        ? { margin: '8px 0 0', whiteSpace: 'pre-wrap', fontWeight: unread ? 600 : 400 }
+                        : { margin: '8px 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: unread ? 600 : 400, color: unread ? 'var(--text)' : 'var(--text-dim)' }
+                      }>{f.message}</p>
+                    </div>
+                    {open && (
+                      <div style={{ marginTop: 8 }}>
+                        <button
+                          className="btn ghost"
+                          style={{ fontSize: 11, padding: '4px 10px', color: 'var(--pink)', borderColor: 'var(--pink)' }}
+                          onClick={(e) => { e.stopPropagation(); deleteFeedback(f); }}
+                        >Delete</button>
+                      </div>
+                    )}
                   </div>
-                  <p style={{ margin: '8px 0 0', whiteSpace: 'pre-wrap' }}>{f.message}</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
